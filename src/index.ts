@@ -1,15 +1,15 @@
 
 import express from 'express';
 import router from './routes';
-import { autenticarJWT } from './middlewares/authMiddleware';
 import pool from './config/databaseConfig';
 import { criarTabelaUsuario } from './models/usuarioModel';
-import { apagarTodasTabelas } from './models/dellAll';
+import { criarTabelaCategorias } from './models/categoriaModel';
+import { criarTabelaTarefas } from './models/tarefaModel';
+import { criarTabelaTarefasRecorrentes } from './models/tarefaRecorrenteModel';
+import { criarTabelaWorkspace } from './models/workspaceModel';
 import { config } from './config';
 
 const app = express();
-
-console.log('Backend iniciando...');
 
 app.use(express.json());
 app.use('/', router);
@@ -19,12 +19,18 @@ async function startServer() {
   try {
     await pool.connect();
     console.log('Conexão com banco de dados Neon bem sucedida!');
-    console.log('Apagando todas as tabelas existentes...');
-    // await apagarTodasTabelas();
-    // console.log('Todas as tabelas apagadas com sucesso!');
-    console.log('Criando tabelas...');
-    await criarTabelaUsuario();
-    console.log('Tabela usuarios criada com sucesso!');
+  //     // Ordem correta de criação das tabelas:
+  //     console.log('Criando tabela usuarios...');
+  //     await criarTabelaUsuario();
+  //     console.log('Criando tabela categorias...');
+  //     await criarTabelaCategorias();
+  //     console.log('Criando tabela tarefas...');
+  //     await criarTabelaTarefas();
+  //     console.log('Criando tabela tarefas recorrentes...');
+  //     await criarTabelaTarefasRecorrentes();
+  //     console.log('Criando tabelas de workspace...');
+  //     await criarTabelaWorkspace();
+  //     console.log('Todas as tabelas criadas com sucesso!');
   } catch (error) {
     console.error('Erro ao conectar ou criar tabela:', error);
     process.exit(1);
