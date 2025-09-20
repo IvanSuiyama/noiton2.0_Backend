@@ -5,7 +5,8 @@ export async function criarTabelaWorkspace() {
     CREATE TABLE IF NOT EXISTS workspace (
       id_workspace SERIAL PRIMARY KEY,
       nome VARCHAR(100),
-      equipe BOOLEAN DEFAULT false
+      equipe BOOLEAN DEFAULT false,
+      criador VARCHAR(255) NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS usuario_workspace (

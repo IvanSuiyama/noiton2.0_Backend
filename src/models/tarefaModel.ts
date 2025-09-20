@@ -2,7 +2,6 @@ import pool from '../config/databaseConfig';
 
 export async function criarTabelaTarefas() {
   await pool.query(`
-
     CREATE TABLE IF NOT EXISTS tarefas (
       id_tarefa SERIAL PRIMARY KEY,
       titulo VARCHAR(255) UNIQUE NOT NULL,
@@ -11,7 +10,9 @@ export async function criarTabelaTarefas() {
       data_fim TIMESTAMP,
       prioridade VARCHAR(10) CHECK (prioridade IN ('alta', 'media', 'baixa')),
       concluida BOOLEAN DEFAULT false,
-      status VARCHAR(50)
+      status VARCHAR(50),
+      recorrente BOOLEAN DEFAULT false,
+      recorrencia VARCHAR(10) CHECK (recorrencia IN ('dia', 'mes', 'ano'))
     );
   `);
 }

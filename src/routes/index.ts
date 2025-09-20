@@ -23,6 +23,5 @@ router.use(autenticarJWT);
 router.use('/categorias', categoriaRoute);
 router.use('/workspaces', workspaceRoute);
 router.use('/tarefas', require('./tarefaRoute').default);
-router.use('/tarefas_recorrentes', require('./tarefaRecorrenteRoute').default);
 
 export default router;

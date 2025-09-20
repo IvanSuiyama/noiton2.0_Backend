@@ -10,22 +10,44 @@ export interface Usuario {
   nome: string;
 }
 
-export async function cadastrarUsuario(usuario: Usuario): Promise<void> {
-  const hash = await bcrypt.hash(usuario.senha, 10);
+// Função auxiliar para validar email
+export function validarFormatoEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// Função auxiliar para criptografar senha
+export async function criptografarSenha(senha: string): Promise<string> {
+  return await bcrypt.hash(senha, 10);
+}
+
+// Função auxiliar para inserir usuário no banco
+export async function inserirUsuarioNoBanco(usuario: Usuario, senhaCriptografada: string): Promise<void> {
   await pool.query(
     'INSERT INTO usuarios (email, senha, telefone, nome) VALUES ($1, $2, $3, $4)',
-    [usuario.email, hash, usuario.telefone ?? null, usuario.nome]
+    [usuario.email, senhaCriptografada, usuario.telefone ?? null, usuario.nome]
   );
 }
 
-export async function editarUsuario(email: string, dados: Partial<Usuario>): Promise<void> {
+// Função principal de cadastro (utiliza as auxiliares)
+export async function cadastrarUsuario(usuario: Usuario): Promise<void> {
+  if (!validarFormatoEmail(usuario.email)) {
+    throw new Error('Formato de email inválido');
+  }
+  
+  const senhaCriptografada = await criptografarSenha(usuario.senha);
+  await inserirUsuarioNoBanco(usuario, senhaCriptografada);
+}
+
+// Função auxiliar para construir query de atualização
+export function construirQueryAtualizacao(dados: Partial<Usuario>, emailBusca: string): { query: string, params: any[] } {
   let query = 'UPDATE usuarios SET';
   const params: any[] = [];
   let set = [];
+  
   if (dados.senha) {
-    const hash = await bcrypt.hash(dados.senha, 10);
     set.push('senha = $' + (params.length + 1));
-    params.push(hash);
+    params.push(dados.senha); // Nota: senha já deve vir criptografada
   }
   if (dados.telefone !== undefined) {
     set.push('telefone = $' + (params.length + 1));
@@ -35,9 +57,26 @@ export async function editarUsuario(email: string, dados: Partial<Usuario>): Pro
     set.push('nome = $' + (params.length + 1));
     params.push(dados.nome);
   }
-  if (set.length === 0) return;
+  
   query += ' ' + set.join(', ') + ' WHERE email = $' + (params.length + 1);
-  params.push(email);
+  params.push(emailBusca);
+  
+  return { query, params };
+}
+
+// Função principal de edição (utiliza as auxiliares)
+export async function editarUsuario(email: string, dados: Partial<Usuario>): Promise<void> {
+  let dadosProcessados = { ...dados };
+  
+  // Criptografar senha se fornecida
+  if (dados.senha) {
+    dadosProcessados.senha = await criptografarSenha(dados.senha);
+  }
+  
+  const { query, params } = construirQueryAtualizacao(dadosProcessados, email);
+  
+  if (params.length === 1) return; // Nenhum campo para atualizar além do email
+  
   await pool.query(query, params);
 }
 

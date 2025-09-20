@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 
 const pool = new Pool({
-  connectionString: '',
+  connectionString: 'SUA URL AQUI',
   ssl: {
     rejectUnauthorized: false
   }

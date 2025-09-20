@@ -8,10 +8,8 @@ export async function apagarTodasTabelas() {
   // Tabelas intermediárias (N:N)
   const tabelas = [
     'tarefa_categoria',
-    'tarefa_recorrente_categoria',
     // Tabelas filhas
     'tarefas',
-    'tarefas_recorrentes',
     // Tabelas pais
     'categorias',
     'usuarios',

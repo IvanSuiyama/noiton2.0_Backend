@@ -10,25 +10,44 @@ export interface Tarefa {
   concluida?: boolean;
   status?: string;
   categorias?: number[]; // lista de ids de categoria
-  palavras_chave?: string[];
   email: string; // responsável
+  recorrente?: boolean;
+  recorrencia?: 'dia' | 'mes' | 'ano';
 }
 
-// Criação de tarefa com categorias e palavras-chave
-export async function criarTarefa(tarefa: Tarefa): Promise<void> {
+// Função para criar apenas a tarefa (sem categorias)
+export async function criarTarefaBase(tarefa: Tarefa): Promise<number> {
   const result = await pool.query(
-    `INSERT INTO tarefas (titulo, descricao, data_inicio, data_fim, prioridade, concluida, status) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id_tarefa`,
-    [tarefa.titulo, tarefa.descricao, tarefa.data_inicio, tarefa.data_fim, tarefa.prioridade, tarefa.concluida ?? false, tarefa.status]
+    `INSERT INTO tarefas (titulo, descricao, data_inicio, data_fim, prioridade, concluida, status, recorrente, recorrencia) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id_tarefa`,
+    [tarefa.titulo, tarefa.descricao, tarefa.data_inicio, tarefa.data_fim, tarefa.prioridade, tarefa.concluida ?? false, tarefa.status, tarefa.recorrente ?? false, tarefa.recorrencia]
   );
-  const id_tarefa = result.rows[0].id_tarefa;
-  // Associa categorias
-  if (tarefa.categorias && tarefa.categorias.length > 0) {
-    for (const id_categoria of tarefa.categorias) {
-      await pool.query('INSERT INTO tarefa_categoria (id_tarefa, id_categoria) VALUES ($1, $2)', [id_tarefa, id_categoria]);
-    }
+  return result.rows[0].id_tarefa;
+}
+
+// Função para associar categorias a uma tarefa
+export async function associarCategoriasATarefa(id_tarefa: number, categorias: number[]): Promise<void> {
+  for (const id_categoria of categorias) {
+    await pool.query('INSERT INTO tarefa_categoria (id_tarefa, id_categoria) VALUES ($1, $2)', [id_tarefa, id_categoria]);
   }
-  // Associa responsável (usuário) à tarefa (via workspace)
-  // Aqui você pode criar a lógica de associação ao workspace se necessário
+}
+
+// Função para remover categorias de uma tarefa
+export async function removerCategoriaDaTarefa(id_tarefa: number, id_categoria?: number): Promise<void> {
+  if (id_categoria) {
+    // Remove categoria específica
+    await pool.query('DELETE FROM tarefa_categoria WHERE id_tarefa = $1 AND id_categoria = $2', [id_tarefa, id_categoria]);
+  } else {
+    // Remove todas as categorias da tarefa
+    await pool.query('DELETE FROM tarefa_categoria WHERE id_tarefa = $1', [id_tarefa]);
+  }
+}
+
+// Função completa para criar tarefa com categorias (usa as funções acima)
+export async function criarTarefa(tarefa: Tarefa): Promise<void> {
+  const id_tarefa = await criarTarefaBase(tarefa);
+  if (tarefa.categorias && tarefa.categorias.length > 0) {
+    await associarCategoriasATarefa(id_tarefa, tarefa.categorias);
+  }
 }
 
 // Filtros: nome, categoria (nome), prazo inicial/final, prioridade, palavras-chave
@@ -60,8 +79,17 @@ export async function buscarTarefas(filtros: any): Promise<Tarefa[]> {
     params.push(filtros.prioridade);
   }
   if (filtros.palavras_chave) {
-    wheres.push(`t.descricao ILIKE $${params.length + 1}`);
+    wheres.push(`(t.titulo ILIKE $${params.length + 1} OR t.descricao ILIKE $${params.length + 2})`);
     params.push(`%${filtros.palavras_chave}%`);
+    params.push(`%${filtros.palavras_chave}%`);
+  }
+  if (filtros.recorrencia) {
+    wheres.push(`t.recorrencia = $${params.length + 1}`);
+    params.push(filtros.recorrencia);
+  }
+  if (filtros.recorrente !== undefined) {
+    wheres.push(`t.recorrente = $${params.length + 1}`);
+    params.push(filtros.recorrente);
   }
   if (wheres.length > 0) {
     query += joins + ' WHERE ' + wheres.join(' AND ');
@@ -73,6 +101,12 @@ export async function buscarTarefas(filtros: any): Promise<Tarefa[]> {
 export async function buscarTarefaPorNome(titulo: string): Promise<Tarefa | null> {
   const result = await pool.query('SELECT * FROM tarefas WHERE titulo = $1', [titulo]);
   return result.rows[0] || null;
+}
+
+// Função para buscar apenas o ID de uma tarefa pelo título
+export async function buscarIdTarefaPorTitulo(titulo: string): Promise<number | null> {
+  const result = await pool.query('SELECT id_tarefa FROM tarefas WHERE titulo = $1', [titulo]);
+  return result.rows[0]?.id_tarefa || null;
 }
 
 export async function atualizarTarefa(titulo: string, dados: Partial<Tarefa>): Promise<void> {
@@ -102,6 +136,14 @@ export async function atualizarTarefa(titulo: string, dados: Partial<Tarefa>): P
   if (dados.status) {
     set.push('status = $' + (params.length + 1));
     params.push(dados.status);
+  }
+  if (typeof dados.recorrente === 'boolean') {
+    set.push('recorrente = $' + (params.length + 1));
+    params.push(dados.recorrente);
+  }
+  if (dados.recorrencia) {
+    set.push('recorrencia = $' + (params.length + 1));
+    params.push(dados.recorrencia);
   }
   query += ' ' + set.join(', ') + ' WHERE titulo = $' + (params.length + 1);
   params.push(titulo);
