@@ -4,6 +4,7 @@ import { criarTabelaCategorias } from '../models/categoriaModel';
 import { criarTabelaTarefas } from '../models/tarefaModel';
 import { criarTabelaWorkspace } from '../models/workspaceModel';
 import { criarTabelaTarefaCategoria } from '../models/tarefaCategoriaModel';
+import { criarTabelaComentarios } from '../models/comentarioModel';
 
 async function resetDatabase() {
   try {
@@ -14,6 +15,7 @@ async function resetDatabase() {
     // Apagar todas as tabelas na ordem correta (devido às dependências)
     console.log('🗑️ Apagando tabelas existentes...');
     
+    await pool.query('DROP TABLE IF EXISTS comentarios CASCADE');
     await pool.query('DROP TABLE IF EXISTS tarefa_workspace CASCADE');
     await pool.query('DROP TABLE IF EXISTS usuario_workspace CASCADE');
     await pool.query('DROP TABLE IF EXISTS tarefa_categoria CASCADE');
@@ -43,6 +45,9 @@ async function resetDatabase() {
     console.log('🔗 Criando tabela tarefa_categoria...');
     await criarTabelaTarefaCategoria();
     
+    console.log('💬 Criando tabela comentarios...');
+    await criarTabelaComentarios();
+    
     console.log('🎉 Todas as tabelas foram recriadas com sucesso!');
     
   } catch (error) {
@@ -55,3 +60,6 @@ async function resetDatabase() {
 
 // Executar o reset
 resetDatabase();
+
+// Para executar este script, use o comando:
+// npx ts-node src/scripts/resetTabelas.ts
