@@ -5,6 +5,8 @@ import usuarioRoute from './usuarioRoute';
 import workspaceRoute from './workspaceRoute';
 import categoriaRoute from './categoriaRoute';
 import comentarioRoute from './comentarioRoute';
+import tarefaRoute from './tarefaRoute';
+import categoriaTarefaRoute from './categoriaTarefaRoute';
 import { autenticarJWT } from '../middlewares/authMiddleware';
 const router = Router();
 
@@ -26,7 +28,8 @@ router.use(autenticarJWT);
 router.use('/usuarios', usuarioRoute); // Todas as outras operações de usuário protegidas
 router.use('/categorias', categoriaRoute);
 router.use('/workspaces', workspaceRoute);
-router.use('/tarefas', require('./tarefaRoute').default);
+router.use('/tarefas', tarefaRoute);
+router.use('/task', categoriaTarefaRoute); // Rotas específicas de categoria-tarefa com nome diferente
 router.use('/', comentarioRoute); // Rotas de comentários
 
 export default router;

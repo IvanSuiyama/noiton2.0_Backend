@@ -15,14 +15,17 @@ async function resetDatabase() {
     // Apagar todas as tabelas na ordem correta (devido às dependências)
     console.log('🗑️ Apagando tabelas existentes...');
     
+    // 1. Tabelas dependentes primeiro
     await pool.query('DROP TABLE IF EXISTS comentarios CASCADE');
+    await pool.query('DROP TABLE IF EXISTS tarefa_categoria CASCADE');
+    await pool.query('DROP TABLE IF EXISTS tarefa_responsavel CASCADE');
     await pool.query('DROP TABLE IF EXISTS tarefa_workspace CASCADE');
     await pool.query('DROP TABLE IF EXISTS usuario_workspace CASCADE');
-    await pool.query('DROP TABLE IF EXISTS tarefa_categoria CASCADE');
-    await pool.query('DROP TABLE IF EXISTS tarefa_recorrente_categoria CASCADE');
+    
+    // 2. Tabelas principais depois
     await pool.query('DROP TABLE IF EXISTS tarefas CASCADE');
-    await pool.query('DROP TABLE IF EXISTS workspace CASCADE');
     await pool.query('DROP TABLE IF EXISTS categorias CASCADE');
+    await pool.query('DROP TABLE IF EXISTS workspace CASCADE');
     await pool.query('DROP TABLE IF EXISTS usuarios CASCADE');
     
     console.log('✅ Tabelas apagadas com sucesso!');
@@ -30,17 +33,19 @@ async function resetDatabase() {
     // Recriar todas as tabelas usando os models existentes
     console.log('🔨 Recriando tabelas...');
     
+    // 1. Tabelas independentes primeiro
     console.log('📝 Criando tabela usuarios...');
     await criarTabelaUsuario();
     
-    console.log('📁 Criando tabela categorias...');
+    console.log('� Criando tabelas de workspace...');
+    await criarTabelaWorkspace();
+    
+    console.log('� Criando tabela categorias...');
     await criarTabelaCategorias();
     
-    console.log('📋 Criando tabela tarefas...');
+    // 2. Tabelas dependentes depois
+    console.log('� Criando tabela tarefas...');
     await criarTabelaTarefas();
-    
-    console.log('👥 Criando tabelas de workspace...');
-    await criarTabelaWorkspace();
     
     console.log('🔗 Criando tabela tarefa_categoria...');
     await criarTabelaTarefaCategoria();

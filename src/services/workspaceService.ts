@@ -116,8 +116,38 @@ export async function verificarCriadorWorkspace(nome: string, emailLogado: strin
 
 // Função auxiliar para remover associações do workspace
 export async function removerAssociacoesWorkspace(id_workspace: number): Promise<void> {
+  // Primeiro, removemos comentários de todas as tarefas deste workspace
+  await pool.query(`
+    DELETE FROM comentarios 
+    WHERE id_tarefa IN (
+      SELECT id_tarefa FROM tarefas WHERE id_workspace = $1
+    )
+  `, [id_workspace]);
+  
+  // Remove associações categoria-tarefa
+  await pool.query(`
+    DELETE FROM tarefa_categoria 
+    WHERE id_tarefa IN (
+      SELECT id_tarefa FROM tarefas WHERE id_workspace = $1
+    )
+  `, [id_workspace]);
+  
+  // Remove responsáveis das tarefas
+  await pool.query(`
+    DELETE FROM tarefa_responsavel 
+    WHERE id_tarefa IN (
+      SELECT id_tarefa FROM tarefas WHERE id_workspace = $1
+    )
+  `, [id_workspace]);
+  
+  // Remove as tarefas do workspace
+  await pool.query('DELETE FROM tarefas WHERE id_workspace = $1', [id_workspace]);
+  
+  // Remove as categorias do workspace
+  await pool.query('DELETE FROM categorias WHERE id_workspace = $1', [id_workspace]);
+  
+  // Remove associações de usuário-workspace
   await pool.query('DELETE FROM usuario_workspace WHERE id_workspace = $1', [id_workspace]);
-  await pool.query('DELETE FROM tarefa_workspace WHERE id_workspace = $1', [id_workspace]);
 }
 
 // Função auxiliar para deletar workspace do banco

@@ -31,6 +31,10 @@ export function extrairDadosComentario(req: Request): any {
 export async function criar(req: Request, res: Response) {
   try {
     const comentario = extrairDadosComentario(req);
+    
+    // Adiciona o email do usuário logado (autor do comentário)
+    comentario.email = req.user?.email;
+    
     await criarComentario(comentario);
     enviarRespostaSucesso(res, 'Comentário criado com sucesso!', 201);
   } catch (error) {

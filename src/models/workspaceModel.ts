@@ -15,12 +15,5 @@ export async function criarTabelaWorkspace() {
       id_workspace INTEGER REFERENCES workspace(id_workspace),
       UNIQUE(email, id_workspace)
     );
-
-    CREATE TABLE IF NOT EXISTS tarefa_workspace (
-      id_tarefa_workspace SERIAL PRIMARY KEY,
-      id_tarefa INTEGER REFERENCES tarefas(id_tarefa),
-      id_workspace INTEGER REFERENCES workspace(id_workspace),
-      UNIQUE(id_tarefa, id_workspace)
-    );
   `);
 }

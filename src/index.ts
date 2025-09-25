@@ -11,8 +11,10 @@ app.use('/', router);
 async function startServer() {
   console.log('Conectando com banco de dados Neon...');
   try {
-    await pool.connect();
+    // Testa a conexão sem manter a conexão aberta
+    const client = await pool.connect();
     console.log('Conexão com banco de dados Neon bem sucedida!');
+    client.release(); // Libera a conexão de volta para o pool
   } catch (error) {
     console.error('Erro ao conectar com banco de dados:', error);
     process.exit(1);
@@ -20,13 +22,13 @@ async function startServer() {
 
 
   // IP Dados Móveis
-  // app.listen(3000, '', () => {
-  //   console.log(`Backend rodando em: CELULAR:3000`);
+  // app.listen(3000, '10.241.191.119', () => {
+  //   console.log(`Backend rodando em: http://10.241.191.119:3000`);
   // });
 
   // Ip Wifi
-  app.listen(3000, '', () => {
-    console.log(`Backend rodando em: WIFI:3000`);
+  app.listen(3000, '192.168.15.15', () => {
+    console.log(`Backend rodando em: http://192.168.15.15:3000`);
   });
 }
 

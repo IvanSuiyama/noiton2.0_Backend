@@ -27,13 +27,24 @@ export function extrairDadosWorkspace(req: Request): any {
 
 // Função auxiliar para extrair email do usuário logado
 export function extrairEmailUsuarioLogado(req: Request): string {
-  return req.body.email;
+  return req.user?.email || '';
 }
 
 // Função principal de criação
 export async function criar(req: Request, res: Response) {
   try {
     const workspace = extrairDadosWorkspace(req);
+    const criador = extrairEmailUsuarioLogado(req);
+    
+    // Adiciona o criador ao workspace
+    workspace.criador = criador;
+    
+    // Inclui o criador na lista de emails (se não estiver presente)
+    workspace.emails = workspace.emails || [];
+    if (!workspace.emails.includes(criador)) {
+      workspace.emails.push(criador);
+    }
+    
     await criarWorkspace(workspace);
     enviarRespostaSucesso(res, 'Workspace criado com sucesso!', 201);
   } catch (error) {

@@ -16,7 +16,7 @@ export async function validarSenhaUsuario(senhaFornecida: string, senhaHash: str
 }
 
 // Função auxiliar para gerar token JWT
-export function gerarTokenJWT(dadosUsuario: { email: string, id: number }): string {
+export function gerarTokenJWT(dadosUsuario: { email: string, id_usuario: number }): string {
   return jwt.sign(dadosUsuario, JWT_SECRET, { expiresIn: '1h' });
 }
 
@@ -28,7 +28,7 @@ export async function autenticarUsuario(email: string, senha: string): Promise<s
   const senhaValida = await validarSenhaUsuario(senha, usuario.senha);
   if (!senhaValida) return null;
   
-  const token = gerarTokenJWT({ email: usuario.email, id: usuario.id });
+  const token = gerarTokenJWT({ email: usuario.email, id_usuario: usuario.id_usuario });
   return token;
 }
 
