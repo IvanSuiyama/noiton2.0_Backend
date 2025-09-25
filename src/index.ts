@@ -22,13 +22,13 @@ async function startServer() {
 
 
   // IP Dados Móveis
-  // app.listen(3000, '10.241.191.119', () => {
-  //   console.log(`Backend rodando em: http://10.241.191.119:3000`);
+  // app.listen(3000, '', () => {
+  //   console.log(`Backend rodando em: http://:3000`);
   // });
 
   // Ip Wifi
-  app.listen(3000, '192.168.15.15', () => {
-    console.log(`Backend rodando em: http://192.168.15.15:3000`);
+  app.listen(3000, '', () => {
+    console.log(`Backend rodando em: http://:3000`);
   });
 }
 
