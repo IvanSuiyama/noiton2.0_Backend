@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 
 const pool = new Pool({
-  connectionString: 'postgresql://postgres:w2GIx0LOQWrIFY4b@db.hyyqzdpcofhumoyuiwfq.supabase.co:5432/postgres',
+  connectionString: 'url',
   max: 10, // máximo de conexões no pool
   idleTimeoutMillis: 30000, // tempo para fechar conexões ociosas
   connectionTimeoutMillis: 2000, // timeout para conectar
