@@ -1,3 +1,19 @@
+// Função para atualizar workspace por id
+export async function atualizarWorkspacePorId(id_workspace: number, dados: Partial<Workspace>): Promise<void> {
+  const campos = [];
+  const valores = [];
+  let idx = 1;
+  for (const key in dados) {
+    campos.push(`${key} = $${idx}`);
+    valores.push((dados as any)[key]);
+    idx++;
+  }
+  if (campos.length === 0) return;
+  await pool.query(
+    `UPDATE workspace SET ${campos.join(', ')} WHERE id_workspace = $${idx}`,
+    [...valores, id_workspace]
+  );
+}
 // Remove um email de um workspace existente
 export async function removerEmailNoWorkspace(email: string, id_workspace: number): Promise<void> {
   await pool.query(

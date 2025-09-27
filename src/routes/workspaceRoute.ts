@@ -14,7 +14,7 @@ const router = Router();
 router.post('/', criar);
 router.get('/email/:email', listarPorEmail);
 router.get('/nome/:nome', buscarPorNome);
-router.put('/:nome', atualizar);
+router.put('/:id_workspace', atualizar);
 router.delete('/:nome', deletar);
 
 // Adiciona um novo email a um workspace existente

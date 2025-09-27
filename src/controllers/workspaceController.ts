@@ -35,6 +35,7 @@ import {
   buscarWorkspacesPorEmail,
   buscarWorkspacePorNome,
   atualizarWorkspace,
+  atualizarWorkspacePorId,
   deletarWorkspaceSeCriador
 } from '../services/workspaceService';
 
@@ -108,10 +109,12 @@ export async function buscarPorNome(req: Request, res: Response) {
 }
 
 // Função principal de atualização
+// Atualiza workspace pelo id
 export async function atualizar(req: Request, res: Response) {
   try {
+    const id_workspace = parseInt(req.params.id_workspace, 10);
     const dados = extrairDadosWorkspace(req);
-    await atualizarWorkspace(req.params.nome, dados);
+    await atualizarWorkspacePorId(id_workspace, dados);
     enviarRespostaSucesso(res, 'Workspace atualizado com sucesso!');
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao atualizar workspace', error);
