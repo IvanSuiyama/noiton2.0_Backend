@@ -45,7 +45,7 @@ Backend Node.js + TypeScript + PostgreSQL (Neon)
 
 ## Banco de dados
 
-- O projeto utiliza PostgreSQL (Neon). Veja `src/config/databaseConfig.ts` para configurar a conexão.
+- O projeto utiliza PostgreSQL. Veja `src/config/databaseConfig.ts` para configurar a conexão.
 
 ## Autenticação
 
