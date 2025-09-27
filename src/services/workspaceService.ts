@@ -1,3 +1,17 @@
+// Remove um email de um workspace existente
+export async function removerEmailNoWorkspace(email: string, id_workspace: number): Promise<void> {
+  await pool.query(
+    'DELETE FROM usuario_workspace WHERE email = $1 AND id_workspace = $2',
+    [email, id_workspace]
+  );
+}
+// Adiciona um novo email a um workspace existente
+export async function adicionarEmailNoWorkspace(email: string, id_workspace: number): Promise<void> {
+  await pool.query(
+    'INSERT INTO usuario_workspace (email, id_workspace) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+    [email, id_workspace]
+  );
+}
 import pool from '../config/databaseConfig';
 
 export interface Workspace {

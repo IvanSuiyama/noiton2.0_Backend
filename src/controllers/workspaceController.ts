@@ -1,3 +1,34 @@
+import { removerEmailNoWorkspace } from '../services/workspaceService';
+
+export async function removerEmailDoWorkspace(req: Request, res: Response) {
+  try {
+    const { emailRuim } = req.body;
+    const id_workspace = parseInt(req.params.id_workspace, 10);
+    if (!emailRuim || !id_workspace) {
+      return enviarRespostaErro(res, 'Parâmetros obrigatórios ausentes', null);
+    }
+    await removerEmailNoWorkspace(emailRuim, id_workspace);
+    enviarRespostaSucesso(res, 'Email removido do workspace com sucesso!', 200);
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao remover email do workspace', error);
+  }
+}
+// Adiciona um novo email a um workspace existente
+import { adicionarEmailNoWorkspace } from '../services/workspaceService';
+
+export async function adicionarEmailAoWorkspace(req: Request, res: Response) {
+  try {
+    const { emailNovo } = req.body;
+    const id_workspace = parseInt(req.params.id_workspace, 10);
+    if (!emailNovo || !id_workspace) {
+      return enviarRespostaErro(res, 'Parâmetros obrigatórios ausentes', null);
+    }
+    await adicionarEmailNoWorkspace(emailNovo, id_workspace);
+    enviarRespostaSucesso(res, 'Email adicionado ao workspace com sucesso!', 200);
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao adicionar email ao workspace', error);
+  }
+}
 import { Request, Response } from 'express';
 import {
   criarWorkspace,
