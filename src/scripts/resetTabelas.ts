@@ -5,6 +5,7 @@ import { criarTabelaTarefas } from '../models/tarefaModel';
 import { criarTabelaWorkspace } from '../models/workspaceModel';
 import { criarTabelaTarefaCategoria } from '../models/tarefaCategoriaModel';
 import { criarTabelaComentarios } from '../models/comentarioModel';
+import { criarTabelaTarefaWorkspace } from '../models/tarefaWorkspaceModel';
 
 async function resetDatabase() {
   try {
@@ -37,18 +38,21 @@ async function resetDatabase() {
     console.log('📝 Criando tabela usuarios...');
     await criarTabelaUsuario();
     
-    console.log('� Criando tabelas de workspace...');
+    console.log('🏢 Criando tabela workspace...');
     await criarTabelaWorkspace();
     
-    console.log('� Criando tabela categorias...');
+    console.log('📂 Criando tabela categorias...');
     await criarTabelaCategorias();
     
     // 2. Tabelas dependentes depois
-    console.log('� Criando tabela tarefas...');
+    console.log('✅ Criando tabela tarefas...');
     await criarTabelaTarefas();
     
     console.log('🔗 Criando tabela tarefa_categoria...');
     await criarTabelaTarefaCategoria();
+    
+    console.log('🔗 Criando tabela tarefa_workspace...');
+    await criarTabelaTarefaWorkspace();
     
     console.log('💬 Criando tabela comentarios...');
     await criarTabelaComentarios();
@@ -65,6 +69,5 @@ async function resetDatabase() {
 
 // Executar o reset
 resetDatabase();
-
 // Para executar este script, use o comando:
 // npx ts-node src/scripts/resetTabelas.ts

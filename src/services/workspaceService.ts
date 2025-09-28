@@ -1,4 +1,22 @@
-// Função para atualizar workspace por id
+import pool from '../config/databaseConfig';
+
+export interface Workspace {
+  id_workspace?: number;
+  nome: string;
+  equipe: boolean;
+  criador: string;
+  emails: string[]; // lista de emails dos usuários
+}
+
+// Função auxiliar para inserir workspace no banco
+export async function inserirWorkspaceNoBanco(workspace: Workspace): Promise<number> {
+  const result = await pool.query(
+    'INSERT INTO workspace (nome, equipe, criador) VALUES ($1, $2, $3) RETURNING id_workspace',
+    [workspace.nome, workspace.equipe, workspace.criador]
+  );
+  return result.rows[0].id_workspace;
+}
+
 export async function atualizarWorkspacePorId(id_workspace: number, dados: Partial<Workspace>): Promise<void> {
   const campos = [];
   const valores = [];
@@ -27,24 +45,6 @@ export async function adicionarEmailNoWorkspace(email: string, id_workspace: num
     'INSERT INTO usuario_workspace (email, id_workspace) VALUES ($1, $2) ON CONFLICT DO NOTHING',
     [email, id_workspace]
   );
-}
-import pool from '../config/databaseConfig';
-
-export interface Workspace {
-  id_workspace?: number;
-  nome: string;
-  equipe: boolean;
-  criador: string;
-  emails: string[]; // lista de emails dos usuários
-}
-
-// Função auxiliar para inserir workspace no banco
-export async function inserirWorkspaceNoBanco(workspace: Workspace): Promise<number> {
-  const result = await pool.query(
-    'INSERT INTO workspace (nome, equipe, criador) VALUES ($1, $2, $3) RETURNING id_workspace',
-    [workspace.nome, workspace.equipe, workspace.criador]
-  );
-  return result.rows[0].id_workspace;
 }
 
 // Função auxiliar para associar usuários ao workspace
@@ -84,24 +84,28 @@ export async function buscarWorkspacesPorEmail(email: string): Promise<Workspace
   return await buscarWorkspacesComEmailsPorUsuario(email);
 }
 
-// Função auxiliar para buscar workspace com emails por nome
-export async function buscarWorkspaceComEmailsPorNome(nome: string): Promise<Workspace | null> {
+// Função auxiliar de busca por id_workspace
+
+// Busca workspace por id, agregando emails dos membros
+export async function buscarWorkspacePorId(id_workspace: number): Promise<Workspace | null> {
   const result = await pool.query(
-    `SELECT w.id_workspace, w.nome, w.equipe, w.criador,
-            ARRAY_AGG(uw.email) as emails
+    `SELECT w.id_workspace, w.nome, w.equipe, w.criador, ARRAY_AGG(uw.email) as emails
      FROM workspace w
      JOIN usuario_workspace uw ON w.id_workspace = uw.id_workspace
-     WHERE w.nome = $1
+     WHERE w.id_workspace = $1
      GROUP BY w.id_workspace, w.nome, w.equipe, w.criador`,
-    [nome]
+    [id_workspace]
   );
   return result.rows[0] || null;
 }
 
-// Função principal de busca por nome
-export async function buscarWorkspacePorNome(nome: string): Promise<Workspace | null> {
-  return await buscarWorkspaceComEmailsPorNome(nome);
+
+// Função principal de busca por id
+export async function buscarWorkspacesPorId(id_workspace: number): Promise<Workspace | null> {
+  return await buscarWorkspacePorId(id_workspace);
 }
+
+
 
 // Função auxiliar para construir query de atualização de workspace
 export function construirQueryAtualizacaoWorkspace(dados: Partial<Workspace>, nomeOriginal: string): { query: string, params: any[] } {
@@ -131,16 +135,14 @@ export async function atualizarWorkspace(nome: string, dados: Partial<Workspace>
 }
 
 // Função auxiliar para verificar se usuário é criador do workspace
-export async function verificarCriadorWorkspace(nome: string, emailLogado: string): Promise<{ isCriador: boolean, id_workspace: number | null }> {
-  const result = await pool.query('SELECT criador, id_workspace FROM workspace WHERE nome = $1', [nome]);
+export async function verificarCriadorWorkspacePorId(id_workspace: number, emailLogado: string): Promise<{ isCriador: boolean }> {
+  const result = await pool.query('SELECT criador FROM workspace WHERE id_workspace = $1', [id_workspace]);
   if (!result.rows[0]) {
-    return { isCriador: false, id_workspace: null };
+    return { isCriador: false };
   }
-  
   const workspace = result.rows[0];
   return {
-    isCriador: workspace.criador === emailLogado,
-    id_workspace: workspace.id_workspace
+    isCriador: workspace.criador === emailLogado
   };
 }
 
@@ -186,13 +188,11 @@ export async function deletarWorkspaceDoBanco(id_workspace: number): Promise<voi
 }
 
 // Função principal de deleção
-export async function deletarWorkspaceSeCriador(nome: string, emailLogado: string): Promise<boolean> {
-  const { isCriador, id_workspace } = await verificarCriadorWorkspace(nome, emailLogado);
-  
-  if (!isCriador || !id_workspace) {
+export async function deletarWorkspaceSeCriador(id_workspace: number, emailLogado: string): Promise<boolean> {
+  const { isCriador } = await verificarCriadorWorkspacePorId(id_workspace, emailLogado);
+  if (!isCriador) {
     return false;
   }
-  
   await removerAssociacoesWorkspace(id_workspace);
   await deletarWorkspaceDoBanco(id_workspace);
   return true;

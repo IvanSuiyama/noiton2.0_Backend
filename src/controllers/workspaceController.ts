@@ -33,8 +33,7 @@ import { Request, Response } from 'express';
 import {
   criarWorkspace,
   buscarWorkspacesPorEmail,
-  buscarWorkspacePorNome,
-  atualizarWorkspace,
+  buscarWorkspacesPorId,
   atualizarWorkspacePorId,
   deletarWorkspaceSeCriador
 } from '../services/workspaceService';
@@ -94,12 +93,12 @@ export async function listarPorEmail(req: Request, res: Response) {
   }
 }
 
-// Função principal de busca por nome
-export async function buscarPorNome(req: Request, res: Response) {
+// Função principal de busca por id
+export async function buscarporID(req: Request, res: Response) {
   try {
-    const workspace = await buscarWorkspacePorNome(req.params.nome);
-    if (workspace) {
-      enviarDadosJSON(res, workspace);
+    const workspaceId = parseInt(req.params.id_workspace, 10);
+    if (workspaceId) {
+      enviarDadosJSON(res, workspaceId);
     } else {
       enviarErro404(res, 'Workspace não encontrado');
     }
@@ -125,7 +124,8 @@ export async function atualizar(req: Request, res: Response) {
 export async function deletar(req: Request, res: Response) {
   try {
     const email = extrairEmailUsuarioLogado(req);
-    const deletado = await deletarWorkspaceSeCriador(req.params.nome, email);
+    const id_workspace = parseInt(req.params.id_workspace, 10);
+    const deletado = await deletarWorkspaceSeCriador(id_workspace, email);
     if (deletado) {
       enviarRespostaSucesso(res, 'Workspace deletado com sucesso!');
     } else {

@@ -24,7 +24,7 @@ async function startServer() {
 
 
 
-  app.listen(3000, '10.241.191.119', () => {
+  app.listen(3000, '', () => {
     console.log(`Backend rodando em: http:/Celular/:3000`);
   });
 }

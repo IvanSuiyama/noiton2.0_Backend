@@ -10,18 +10,14 @@ export interface Tarefa {
   status?: 'a_fazer' | 'em_andamento' | 'concluido' | 'atrasada';
   concluida?: boolean;
   recorrente?: boolean;
-  id_workspace: number;
-  id_usuario?: number;
-  responsaveis?: string[]; // lista de emails dos responsáveis
-  categorias?: number[]; // lista de ids de categoria
   recorrencia?: 'diaria' | 'semanal' | 'mensal';
+  categorias?: number[]; // lista de ids de categoria
 }
 
-// Função para criar apenas a tarefa base (sem categorias e responsáveis)
-export async function criarTarefaBase(tarefa: Tarefa): Promise<number> {
+export async function criarTarefaBase(tarefa: Tarefa, id_usuario: number): Promise<number> {
   const result = await pool.query(
-    `INSERT INTO tarefas (titulo, descricao, data_fim, prioridade, status, concluida, recorrente, recorrencia, id_workspace, id_usuario) 
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id_tarefa`,
+    `INSERT INTO tarefas (titulo, descricao, data_fim, prioridade, status, concluida, recorrente, recorrencia, id_usuario) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id_tarefa`,
     [
       tarefa.titulo, 
       tarefa.descricao, 
@@ -31,31 +27,28 @@ export async function criarTarefaBase(tarefa: Tarefa): Promise<number> {
       tarefa.concluida ?? false, 
       tarefa.recorrente ?? false, 
       tarefa.recorrencia,
-      tarefa.id_workspace,
-      tarefa.id_usuario
+      id_usuario  // ✅ Agora recebido como parâmetro separado
     ]
   );
   return result.rows[0].id_tarefa;
 }
 
-// Função para associar responsáveis (emails) a uma tarefa
-export async function associarResponsaveisATarefa(id_tarefa: number, emails: string[]): Promise<void> {
-  for (const email of emails) {
-    await pool.query(
-      'INSERT INTO tarefa_responsavel (id_tarefa, email) VALUES ($1, $2) ON CONFLICT (id_tarefa, email) DO NOTHING', 
-      [id_tarefa, email]
-    );
-  }
+// Função para associar tarefa a workspace
+export async function associarTarefaAWorkspace(id_tarefa: number, id_workspace: number): Promise<void> {
+  await pool.query(
+    'INSERT INTO tarefa_workspace (id_tarefa, id_workspace) VALUES ($1, $2) ON CONFLICT (id_tarefa, id_workspace) DO NOTHING', 
+    [id_tarefa, id_workspace]
+  );
 }
 
-// Função para remover responsáveis de uma tarefa
-export async function removerResponsavelDaTarefa(id_tarefa: number, email?: string): Promise<void> {
-  if (email) {
-    // Remove responsável específico
-    await pool.query('DELETE FROM tarefa_responsavel WHERE id_tarefa = $1 AND email = $2', [id_tarefa, email]);
+// Função para remover tarefa de workspace
+export async function removerTarefaDeWorkspace(id_tarefa: number, id_workspace?: number): Promise<void> {
+  if (id_workspace) {
+    // Remove associação específica
+    await pool.query('DELETE FROM tarefa_workspace WHERE id_tarefa = $1 AND id_workspace = $2', [id_tarefa, id_workspace]);
   } else {
-    // Remove todos os responsáveis da tarefa
-    await pool.query('DELETE FROM tarefa_responsavel WHERE id_tarefa = $1', [id_tarefa]);
+    // Remove todas as associações da tarefa
+    await pool.query('DELETE FROM tarefa_workspace WHERE id_tarefa = $1', [id_tarefa]);
   }
 }
 
@@ -98,16 +91,30 @@ export async function removerCategoriaDaTarefa(id_tarefa: number, id_categoria?:
   }
 }
 
-// Função completa para criar tarefa com categorias e responsáveis
-export async function criarTarefa(tarefa: Tarefa): Promise<void> {
-  const id_tarefa = await criarTarefaBase(tarefa);
-  
-  if (tarefa.categorias && tarefa.categorias.length > 0) {
-    await associarCategoriasATarefa(id_tarefa, tarefa.categorias);
-  }
-  
-  if (tarefa.responsaveis && tarefa.responsaveis.length > 0) {
-    await associarResponsaveisATarefa(id_tarefa, tarefa.responsaveis);
+export async function criarTarefa(tarefa: Tarefa, id_workspace: number, id_usuario: number): Promise<number> {
+  try {
+    console.log('✅ 1. Criando tarefa base...');
+    const id_tarefa = await criarTarefaBase(tarefa, id_usuario); // ✅ Passar id_usuario
+    console.log('✅ Tarefa base criada com ID:', id_tarefa);
+
+    console.log('✅ 2. Associando tarefa ao workspace...');
+    await associarTarefaAWorkspace(id_tarefa, id_workspace);
+    console.log('✅ Tarefa associada ao workspace');
+
+    if (tarefa.categorias && tarefa.categorias.length > 0) {
+      console.log('✅ 3. Associando categorias...', tarefa.categorias);
+      await associarCategoriasATarefa(id_tarefa, tarefa.categorias);
+      console.log('✅ Categorias associadas');
+    } else {
+      console.log('✅ 3. Nenhuma categoria para associar');
+    }
+
+    console.log('🎉 Tarefa criada com sucesso! ID:', id_tarefa);
+    return id_tarefa;
+    
+  } catch (error) {
+    console.error('❌ Erro detalhado na criação da tarefa:', error);
+    throw error;
   }
 }
 
@@ -119,15 +126,11 @@ export async function buscarTarefasPorWorkspace(id_workspace: number): Promise<T
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
-      ) as categorias,
-      COALESCE(
-        ARRAY_AGG(DISTINCT tr.email) FILTER (WHERE tr.email IS NOT NULL), 
-        ARRAY[]::TEXT[]
-      ) as responsaveis
+      ) as categorias
     FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
-    LEFT JOIN tarefa_responsavel tr ON t.id_tarefa = tr.id_tarefa
-    WHERE t.id_workspace = $1
+    WHERE tw.id_workspace = $1
     GROUP BY t.id_tarefa
     ORDER BY t.data_criacao DESC
   `, [id_workspace]);
@@ -135,27 +138,22 @@ export async function buscarTarefasPorWorkspace(id_workspace: number): Promise<T
   return result.rows;
 }
 
-// Função para buscar tarefas por responsável (email) em um workspace
-export async function buscarTarefasPorResponsavelEWorkspace(email: string, id_workspace: number): Promise<Tarefa[]> {
+// Função para buscar tarefas por usuário em um workspace
+export async function buscarTarefasPorUsuarioEWorkspace(id_usuario: number, id_workspace: number): Promise<Tarefa[]> {
   const result = await pool.query(`
     SELECT 
       t.*,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
-      ) as categorias,
-      COALESCE(
-        ARRAY_AGG(DISTINCT tr.email) FILTER (WHERE tr.email IS NOT NULL), 
-        ARRAY[]::TEXT[]
-      ) as responsaveis
+      ) as categorias
     FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
-    LEFT JOIN tarefa_responsavel tr ON t.id_tarefa = tr.id_tarefa
-    INNER JOIN tarefa_responsavel tr2 ON t.id_tarefa = tr2.id_tarefa
-    WHERE tr2.email = $1 AND t.id_workspace = $2
+    WHERE t.id_usuario = $1 AND tw.id_workspace = $2
     GROUP BY t.id_tarefa
     ORDER BY t.data_criacao DESC
-  `, [email, id_workspace]);
+  `, [id_usuario, id_workspace]);
   
   return result.rows;
 }
@@ -168,19 +166,15 @@ export async function buscarTarefasComFiltros(id_workspace: number, filtros: any
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
-      ) as categorias,
-      COALESCE(
-        ARRAY_AGG(DISTINCT tr.email) FILTER (WHERE tr.email IS NOT NULL), 
-        ARRAY[]::TEXT[]
-      ) as responsaveis
+      ) as categorias
     FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
-    LEFT JOIN tarefa_responsavel tr ON t.id_tarefa = tr.id_tarefa
   `;
   
   const params: any[] = [id_workspace];
   let joins = '';
-  let wheres = ['t.id_workspace = $1'];
+  let wheres = ['tw.id_workspace = $1'];
 
   if (filtros.categoria_nome) {
     joins += ' JOIN categorias c ON tc.id_categoria = c.id_categoria';
@@ -193,14 +187,13 @@ export async function buscarTarefasComFiltros(id_workspace: number, filtros: any
     params.push(`%${filtros.titulo}%`);
   }
   
-  if (filtros.responsavel_email) {
-    joins += ' JOIN tarefa_responsavel tr_filter ON t.id_tarefa = tr_filter.id_tarefa';
-    wheres.push(`tr_filter.email = $${params.length + 1}`);
-    params.push(filtros.responsavel_email);
+  if (filtros.id_usuario) {
+    wheres.push(`t.id_usuario = $${params.length + 1}`);
+    params.push(filtros.id_usuario);
   }
   
   if (filtros.data_inicio) {
-    wheres.push(`t.data_inicio >= $${params.length + 1}`);
+    wheres.push(`t.data_criacao >= $${params.length + 1}`);
     params.push(filtros.data_inicio);
   }
   
@@ -231,32 +224,46 @@ export async function buscarTarefasComFiltros(id_workspace: number, filtros: any
   return result.rows;
 }
 
-export async function buscarTarefaPorTituloEWorkspace(titulo: string, id_workspace: number): Promise<Tarefa | null> {
+export async function buscarTarefaPorTituloEUsuario(titulo: string, id_usuario: number): Promise<Tarefa | null> {
   const result = await pool.query(`
     SELECT 
       t.*,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
-      ) as categorias,
-      COALESCE(
-        ARRAY_AGG(DISTINCT tr.email) FILTER (WHERE tr.email IS NOT NULL), 
-        ARRAY[]::TEXT[]
-      ) as responsaveis
+      ) as categorias
     FROM tarefas t
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
-    LEFT JOIN tarefa_responsavel tr ON t.id_tarefa = tr.id_tarefa
-    WHERE t.titulo = $1 AND t.id_workspace = $2
+    WHERE t.titulo = $1 AND t.id_usuario = $2
     GROUP BY t.id_tarefa
-  `, [titulo, id_workspace]);
+  `, [titulo, id_usuario]);
   
   return result.rows[0] || null;
 }
 
-// Função para buscar apenas o ID de uma tarefa pelo título e workspace
-export async function buscarIdTarefaPorTituloEWorkspace(titulo: string, id_workspace: number): Promise<number | null> {
-  const result = await pool.query('SELECT id_tarefa FROM tarefas WHERE titulo = $1 AND id_workspace = $2', [titulo, id_workspace]);
+// Função para buscar apenas o ID de uma tarefa pelo título e usuário
+export async function buscarIdTarefaPorTituloEUsuario(titulo: string, id_usuario: number): Promise<number | null> {
+  const result = await pool.query('SELECT id_tarefa FROM tarefas WHERE titulo = $1 AND id_usuario = $2', [titulo, id_usuario]);
   return result.rows[0]?.id_tarefa || null;
+}
+
+// Função para buscar tarefa por ID e workspace
+export async function buscarTarefaPorIdEWorkspace(id_tarefa: number, id_workspace: number): Promise<Tarefa | null> {
+  const result = await pool.query(`
+    SELECT 
+      t.*,
+      COALESCE(
+        ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
+        ARRAY[]::INTEGER[]
+      ) as categorias
+    FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
+    LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
+    WHERE t.id_tarefa = $1 AND tw.id_workspace = $2
+    GROUP BY t.id_tarefa
+  `, [id_tarefa, id_workspace]);
+  
+  return result.rows[0] || null;
 }
 
 export async function atualizarTarefa(id_tarefa: number, dados: Partial<Tarefa>): Promise<void> {
@@ -311,35 +318,23 @@ export async function atualizarTarefa(id_tarefa: number, dados: Partial<Tarefa>)
       await associarCategoriasATarefa(id_tarefa, dados.categorias);
     }
   }
-  
-  // Atualizar responsáveis se fornecido
-  if (dados.responsaveis !== undefined) {
-    await removerResponsavelDaTarefa(id_tarefa);
-    if (dados.responsaveis.length > 0) {
-      await associarResponsaveisATarefa(id_tarefa, dados.responsaveis);
-    }
-  }
 }
 
-// Função para deletar tarefa (verifica se o usuário logado é responsável ou criador do workspace)
-export async function deletarTarefaPorId(id_tarefa: number, emailUsuarioLogado: string): Promise<boolean> {
-  // Verifica se o usuário é responsável pela tarefa ou criador do workspace
-  const result = await pool.query(`
-    SELECT t.id_workspace, w.criador
-    FROM tarefas t
-    JOIN workspace w ON t.id_workspace = w.id_workspace
-    LEFT JOIN tarefa_responsavel tr ON t.id_tarefa = tr.id_tarefa
-    WHERE t.id_tarefa = $1 AND (tr.email = $2 OR w.criador = $2)
-    LIMIT 1
-  `, [id_tarefa, emailUsuarioLogado]);
+// Função para deletar tarefa (verifica se o usuário logado é o criador da tarefa)
+export async function deletarTarefaPorId(id_tarefa: number, id_usuario_logado: number): Promise<boolean> {
+  // Verifica se o usuário é o criador da tarefa
+  const result = await pool.query(
+    'SELECT id_tarefa FROM tarefas WHERE id_tarefa = $1 AND id_usuario = $2',
+    [id_tarefa, id_usuario_logado]
+  );
 
   if (result.rows.length === 0) {
     return false; // Usuário não tem permissão
   }
 
-  // Remove associações primeiro
+  // Remove associações primeiro (categorias e workspaces)
   await removerCategoriaDaTarefa(id_tarefa);
-  await removerResponsavelDaTarefa(id_tarefa);
+  await removerTarefaDeWorkspace(id_tarefa);
   
   // Remove comentários da tarefa
   await pool.query('DELETE FROM comentarios WHERE id_tarefa = $1', [id_tarefa]);
@@ -347,4 +342,28 @@ export async function deletarTarefaPorId(id_tarefa: number, emailUsuarioLogado: 
   // Remove a tarefa
   await pool.query('DELETE FROM tarefas WHERE id_tarefa = $1', [id_tarefa]);
   return true;
+}
+
+// Função para buscar workspaces de uma tarefa
+export async function buscarWorkspacesDaTarefa(id_tarefa: number): Promise<number[]> {
+  const result = await pool.query(
+    'SELECT id_workspace FROM tarefa_workspace WHERE id_tarefa = $1',
+    [id_tarefa]
+  );
+  
+  return result.rows.map(row => row.id_workspace);
+}
+
+// Função para verificar se usuário tem acesso à tarefa no workspace
+export async function usuarioTemAcessoTarefa(id_tarefa: number, id_usuario: number, id_workspace: number): Promise<boolean> {
+  const result = await pool.query(`
+    SELECT 1 
+    FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
+    INNER JOIN workspace_membros wm ON tw.id_workspace = wm.id_workspace
+    WHERE t.id_tarefa = $1 AND wm.id_usuario = $2 AND tw.id_workspace = $3
+    LIMIT 1
+  `, [id_tarefa, id_usuario, id_workspace]);
+  
+  return result.rows.length > 0;
 }

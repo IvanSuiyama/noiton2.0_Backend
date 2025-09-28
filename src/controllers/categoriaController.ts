@@ -22,13 +22,13 @@ export function enviarErroCategoriaEmUso(res: Response): void {
 // Função principal de criação
 export async function criar(req: Request, res: Response) {
   try {
-    const { nome, cor = '#007acc', id_workspace } = req.body;
+    const { nome, id_workspace } = req.body;
     
     if (!id_workspace) {
       return res.status(400).json({ error: 'ID do workspace é obrigatório.' });
     }
     
-    await criarCategoria(nome, cor, Number(id_workspace));
+    await criarCategoria(nome, Number(id_workspace));
     enviarRespostaSucesso(res, 'Categoria criada com sucesso!', 201);
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao criar categoria', error);
@@ -89,13 +89,13 @@ export async function buscarPorNome(req: Request, res: Response) {
 export async function atualizar(req: Request, res: Response) {
   try {
     const { id_categoria } = req.params;
-    const { nome, cor, id_workspace } = req.body;
+    const { nome, id_workspace } = req.body;
     
     if (!id_workspace) {
       return res.status(400).json({ error: 'ID do workspace é obrigatório.' });
     }
     
-    await atualizarCategoria(Number(id_categoria), nome, cor, Number(id_workspace));
+    await atualizarCategoria(Number(id_categoria), nome, Number(id_workspace));
     enviarRespostaSucesso(res, 'Categoria atualizada com sucesso!');
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao atualizar categoria', error);

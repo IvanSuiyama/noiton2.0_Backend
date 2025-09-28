@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   criar,
   listarPorEmail,
-  buscarPorNome,
+  buscarporID,
   atualizar,
   deletar,
   adicionarEmailAoWorkspace,
@@ -13,9 +13,9 @@ const router = Router();
 
 router.post('/', criar);
 router.get('/email/:email', listarPorEmail);
-router.get('/nome/:nome', buscarPorNome);
+router.get('/id/:id_workspace', buscarporID);
 router.put('/:id_workspace', atualizar);
-router.delete('/:nome', deletar);
+router.delete('/:id_workspace', deletar);
 
 // Adiciona um novo email a um workspace existente
 router.post('/:id_workspace/adicionar-email', adicionarEmailAoWorkspace);

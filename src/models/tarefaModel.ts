@@ -13,17 +13,9 @@ export async function criarTabelaTarefas() {
       concluida BOOLEAN DEFAULT false,
       recorrente BOOLEAN DEFAULT false,
       recorrencia VARCHAR(10) CHECK (recorrencia IN ('diaria', 'semanal', 'mensal')),
-      id_workspace INTEGER NOT NULL REFERENCES workspace(id_workspace) ON DELETE CASCADE,
       id_usuario INTEGER NOT NULL REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-      UNIQUE(titulo, id_workspace)
+      UNIQUE(titulo, id_usuario)
     );
 
-    -- Tabela para associar responsáveis (emails) às tarefas - N:N
-    CREATE TABLE IF NOT EXISTS tarefa_responsavel (
-      id_tarefa_responsavel SERIAL PRIMARY KEY,
-      id_tarefa INTEGER NOT NULL REFERENCES tarefas(id_tarefa) ON DELETE CASCADE,
-      email VARCHAR(255) NOT NULL REFERENCES usuarios(email) ON DELETE CASCADE,
-      UNIQUE(id_tarefa, email)
-    );
   `);
 }

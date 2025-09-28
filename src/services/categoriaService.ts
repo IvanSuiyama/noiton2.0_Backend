@@ -3,21 +3,20 @@ import pool from '../config/databaseConfig';
 export interface Categoria {
   id_categoria?: number;
   nome: string;
-  cor?: string;
   id_workspace: number;
 }
 
 // Função auxiliar para inserir categoria no banco
-export async function inserirCategoriaNoBanco(nome: string, cor: string, id_workspace: number): Promise<void> {
+export async function inserirCategoriaNoBanco(nome: string, id_workspace: number): Promise<void> {
   await pool.query(
-    'INSERT INTO categorias (nome, cor, id_workspace) VALUES ($1, $2, $3)', 
-    [nome, cor, id_workspace]
+    'INSERT INTO categorias (nome, id_workspace) VALUES ($1, $2)', 
+    [nome, id_workspace]
   );
 }
 
 // Função principal de criação
-export async function criarCategoria(nome: string, cor: string = '#007acc', id_workspace: number): Promise<void> {
-  await inserirCategoriaNoBanco(nome, cor, id_workspace);
+export async function criarCategoria(nome: string, id_workspace: number): Promise<void> {
+  await inserirCategoriaNoBanco(nome, id_workspace);
 }
 
 // Função auxiliar para buscar categorias por workspace com filtro de nome
@@ -72,16 +71,16 @@ export async function verificarCategoriaPertenceAoWorkspace(id_categoria: number
 }
 
 // Função auxiliar para atualizar categoria no banco
-export async function atualizarCategoriaNoBanco(id_categoria: number, nome: string, cor: string, id_workspace: number): Promise<void> {
+export async function atualizarCategoriaNoBanco(id_categoria: number, nome: string, id_workspace: number): Promise<void> {
   await pool.query(
-    'UPDATE categorias SET nome = $1, cor = $2 WHERE id_categoria = $3 AND id_workspace = $4', 
-    [nome, cor, id_categoria, id_workspace]
+    'UPDATE categorias SET nome = $1 WHERE id_categoria = $2 AND id_workspace = $3', 
+    [nome, id_categoria, id_workspace]
   );
 }
 
 // Função principal de atualização
-export async function atualizarCategoria(id_categoria: number, nome: string, cor: string, id_workspace: number): Promise<void> {
-  await atualizarCategoriaNoBanco(id_categoria, nome, cor, id_workspace);
+export async function atualizarCategoria(id_categoria: number, nome: string, id_workspace: number): Promise<void> {
+  await atualizarCategoriaNoBanco(id_categoria, nome, id_workspace);
 }
 
 // Função auxiliar para deletar categoria do banco (com verificação de workspace)
