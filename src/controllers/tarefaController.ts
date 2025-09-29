@@ -131,8 +131,8 @@ export async function buscarTarefasComFiltros(req: Request, res: Response) {
     
     // Verifica se o usuário tem acesso ao workspace
     const temAcesso = await pool.query(
-      'SELECT 1 FROM workspace_membros WHERE id_workspace = $1 AND id_usuario = $2',
-      [Number(id_workspace), req.user?.id_usuario]
+      'SELECT 1 FROM usuario_workspace WHERE id_workspace = $1 AND email = $2',
+      [Number(id_workspace), req.user?.email]
     );
     
     if (temAcesso.rows.length === 0) {
@@ -178,7 +178,8 @@ export async function buscarTarefaPorIdEWorkspace(req: Request, res: Response) {
     const temAcesso = await tarefaService.usuarioTemAcessoTarefa(
       Number(id_tarefa), 
       req.user?.id_usuario, 
-      Number(id_workspace)
+      Number(id_workspace),
+      req.user?.email
     );
     
     if (!temAcesso) {
@@ -307,9 +308,9 @@ export async function listarCategoriasDaTarefa(req: Request, res: Response) {
       `SELECT t.id_tarefa 
        FROM tarefas t
        LEFT JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
-       LEFT JOIN workspace_membros wm ON tw.id_workspace = wm.id_workspace
-       WHERE t.id_tarefa = $1 AND (t.id_usuario = $2 OR wm.id_usuario = $2)`,
-      [Number(id_tarefa), req.user?.id_usuario]
+       LEFT JOIN usuario_workspace uw ON tw.id_workspace = uw.id_workspace
+       WHERE t.id_tarefa = $1 AND uw.email = $2`,
+      [Number(id_tarefa), req.user?.email]
     );
     
     if (tarefa.rows.length === 0) {
@@ -317,7 +318,7 @@ export async function listarCategoriasDaTarefa(req: Request, res: Response) {
     }
     
     const categorias = await pool.query(`
-      SELECT c.id_categoria, c.nome, c.cor 
+      SELECT c.id_categoria, c.nome
       FROM categorias c
       INNER JOIN tarefa_categoria tc ON c.id_categoria = tc.id_categoria
       WHERE tc.id_tarefa = $1

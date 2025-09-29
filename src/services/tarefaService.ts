@@ -355,15 +355,15 @@ export async function buscarWorkspacesDaTarefa(id_tarefa: number): Promise<numbe
 }
 
 // Função para verificar se usuário tem acesso à tarefa no workspace
-export async function usuarioTemAcessoTarefa(id_tarefa: number, id_usuario: number, id_workspace: number): Promise<boolean> {
+export async function usuarioTemAcessoTarefa(id_tarefa: number, id_usuario: number, id_workspace: number, email: string): Promise<boolean> {
   const result = await pool.query(`
     SELECT 1 
     FROM tarefas t
     INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
-    INNER JOIN workspace_membros wm ON tw.id_workspace = wm.id_workspace
-    WHERE t.id_tarefa = $1 AND wm.id_usuario = $2 AND tw.id_workspace = $3
+    INNER JOIN usuario_workspace uw ON tw.id_workspace = uw.id_workspace
+    WHERE t.id_tarefa = $1 AND uw.email = $2 AND tw.id_workspace = $3
     LIMIT 1
-  `, [id_tarefa, id_usuario, id_workspace]);
+  `, [id_tarefa, email, id_workspace]);
   
   return result.rows.length > 0;
 }
