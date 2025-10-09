@@ -1,20 +1,21 @@
 import { Pool } from 'pg';
 
+const connectionString = 'postgresql://postgres:1234@localhost:5432/Noiton2';
+
 const pool = new Pool({
-  connectionString: 'postgresql://postgres:w2GIx0LOQWrIFY4b@db.hyyqzdpcofhumoyuiwfq.supabase.co:5432/postgres',
-  max: 10, // máximo de conexões no pool
-  idleTimeoutMillis: 30000, // tempo para fechar conexões ociosas
-  connectionTimeoutMillis: 2000, // timeout para conectar
+  connectionString,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // Event listeners para debug
 pool.on('connect', () => {
-  console.log('Nova conexão estabelecida com o pool');
+  console.log('✅ Conectado ao PostgreSQL local');
 });
 
 pool.on('error', (err) => {
-  console.error('Erro no pool de conexões:', err);
-  process.exit(-1);
+  console.error('❌ Erro na conexão PostgreSQL:', err);
 });
 
 export default pool;

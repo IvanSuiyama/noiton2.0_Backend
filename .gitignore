@@ -21,3 +21,8 @@ Thumbs.db
 
 # Testes e documentação temporária
 Testes.txt
+
+# Scripts SQL de desenvolvimento
+popular_banco.sql
+src/scripts/popular_banco.sql
+*.sql

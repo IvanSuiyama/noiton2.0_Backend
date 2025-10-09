@@ -6,6 +6,7 @@ import workspaceRoute from './workspaceRoute';
 import categoriaRoute from './categoriaRoute';
 import comentarioRoute from './comentarioRoute';
 import tarefaRoute from './tarefaRoute';
+import permissaoRoute from './permissaoRoute';
 import { autenticarJWT } from '../middlewares/authMiddleware';
 const router = Router();
 
@@ -29,5 +30,6 @@ router.use('/categorias', categoriaRoute);
 router.use('/workspaces', workspaceRoute);
 router.use('/tarefas', tarefaRoute);
 router.use('/', comentarioRoute); // Rotas de comentários
+router.use('/', permissaoRoute); // Rotas de permissões
 
 export default router;

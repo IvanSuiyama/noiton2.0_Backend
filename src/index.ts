@@ -9,11 +9,11 @@ app.use(express.json());
 app.use('/', router);
 
 async function startServer() {
-  console.log('Conectando com banco de dados Neon...');
+  console.log('Conectando com banco de dados ...');
   try {
     // Testa a conexão sem manter a conexão aberta
     const client = await pool.connect();
-    console.log('Conexão com banco de dados Neon bem sucedida!');
+    console.log('Conexão com banco de dados bem sucedida!');
     client.release(); // Libera a conexão de volta para o pool
   } catch (error) {
     console.error('Erro ao conectar com banco de dados:', error);
