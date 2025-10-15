@@ -41,4 +41,5 @@ router.delete('/:id_tarefa/categorias/:id_categoria', autenticarJWT, tarefaContr
 router.post('/:id_tarefa/workspace', autenticarJWT, tarefaController.associarTarefaAWorkspace);
 router.delete('/:id_tarefa/workspace/:id_workspace', autenticarJWT, tarefaController.removerTarefaDeWorkspace);
 
+
 export default router;

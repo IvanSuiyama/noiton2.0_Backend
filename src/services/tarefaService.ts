@@ -2,6 +2,8 @@ import pool from '../config/databaseConfig';
 
 export interface Tarefa {
   id_tarefa?: number;
+  id_workspace?: number;
+  id_usuario?: number;
   titulo: string;
   descricao?: string;
   data_fim?: Date;
@@ -118,7 +120,6 @@ export async function criarTarefa(tarefa: Tarefa, id_workspace: number, id_usuar
   }
 }
 
-// Função para buscar tarefas por workspace
 export async function buscarTarefasPorWorkspace(id_workspace: number): Promise<Tarefa[]> {
   const result = await pool.query(`
     SELECT 
@@ -135,7 +136,13 @@ export async function buscarTarefasPorWorkspace(id_workspace: number): Promise<T
     ORDER BY t.data_criacao DESC
   `, [id_workspace]);
   
-  return result.rows;
+  // ✅ Mapear explicitamente o resultado e forçar o id_workspace
+  const tarefasComWorkspace = result.rows.map(row => ({
+    ...row,
+    id_workspace: id_workspace  // ✅ Garantir que sempre tem o id_workspace
+  }));
+  
+  return tarefasComWorkspace;
 }
 
 // Função para buscar tarefas por usuário em um workspace
@@ -143,6 +150,7 @@ export async function buscarTarefasPorUsuarioEWorkspace(id_usuario: number, id_w
   const result = await pool.query(`
     SELECT 
       t.*,
+      tw.id_workspace,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
@@ -151,7 +159,7 @@ export async function buscarTarefasPorUsuarioEWorkspace(id_usuario: number, id_w
     INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
     WHERE t.id_usuario = $1 AND tw.id_workspace = $2
-    GROUP BY t.id_tarefa
+    GROUP BY t.id_tarefa, tw.id_workspace
     ORDER BY t.data_criacao DESC
   `, [id_usuario, id_workspace]);
   
@@ -163,6 +171,7 @@ export async function buscarTarefasComFiltros(id_workspace: number, filtros: any
   let query = `
     SELECT 
       t.*,
+      tw.id_workspace,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
@@ -218,7 +227,7 @@ export async function buscarTarefasComFiltros(id_workspace: number, filtros: any
     params.push(`%${filtros.palavras_chave}%`);
   }
 
-  query += joins + ' WHERE ' + wheres.join(' AND ') + ' GROUP BY t.id_tarefa ORDER BY t.data_criacao DESC';
+  query += joins + ' WHERE ' + wheres.join(' AND ') + ' GROUP BY t.id_tarefa, tw.id_workspace ORDER BY t.data_criacao DESC';
   
   const result = await pool.query(query, params);
   return result.rows;
@@ -228,14 +237,16 @@ export async function buscarTarefaPorTituloEUsuario(titulo: string, id_usuario: 
   const result = await pool.query(`
     SELECT 
       t.*,
+      tw.id_workspace,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
       ) as categorias
     FROM tarefas t
+    LEFT JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
     WHERE t.titulo = $1 AND t.id_usuario = $2
-    GROUP BY t.id_tarefa
+    GROUP BY t.id_tarefa, tw.id_workspace
   `, [titulo, id_usuario]);
   
   return result.rows[0] || null;
@@ -252,6 +263,7 @@ export async function buscarTarefaPorIdEWorkspace(id_tarefa: number, id_workspac
   const result = await pool.query(`
     SELECT 
       t.*,
+      tw.id_workspace,
       COALESCE(
         ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
         ARRAY[]::INTEGER[]
@@ -260,7 +272,7 @@ export async function buscarTarefaPorIdEWorkspace(id_tarefa: number, id_workspac
     INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
     LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
     WHERE t.id_tarefa = $1 AND tw.id_workspace = $2
-    GROUP BY t.id_tarefa
+    GROUP BY t.id_tarefa, tw.id_workspace
   `, [id_tarefa, id_workspace]);
   
   return result.rows[0] || null;

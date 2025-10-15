@@ -97,8 +97,15 @@ export async function listarPorEmail(req: Request, res: Response) {
 export async function buscarporID(req: Request, res: Response) {
   try {
     const workspaceId = parseInt(req.params.id_workspace, 10);
-    if (workspaceId) {
-      enviarDadosJSON(res, workspaceId);
+    
+    if (isNaN(workspaceId)) {
+      return res.status(400).json({ error: 'ID do workspace deve ser um número válido' });
+    }
+
+    const workspace = await buscarWorkspacesPorId(workspaceId);
+    
+    if (workspace) {
+      enviarDadosJSON(res, workspace);
     } else {
       enviarErro404(res, 'Workspace não encontrado');
     }
