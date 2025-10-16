@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 
-const connectionString = 'SUA URL AQUI'
+const connectionString = 'postgresql://postgres:1234@localhost:5432/Noiton2';
+// const connectionString = 'SUA URL AQUI'
 const pool = new Pool({
   connectionString,
   max: 10,

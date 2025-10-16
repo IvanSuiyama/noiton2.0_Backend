@@ -138,3 +138,30 @@ export async function podeRealizarAcao(idTarefa: number, idUsuario: number, acao
       return false;
   }
 }
+
+// NOVA FUNÇÃO: Listar usuários de um workspace
+export async function listarUsuariosWorkspace(idWorkspace: number): Promise<PermissaoInfo[]> {
+  const result = await pool.query(
+    `SELECT u.id_usuario, u.email, u.nome, 2 as nivel_acesso
+     FROM usuarios u
+     JOIN usuario_workspace uw ON u.id_usuario = uw.id_usuario
+     WHERE uw.id_workspace = $1
+     ORDER BY u.nome ASC`,
+    [idWorkspace]
+  );
+  
+  return result.rows;
+}
+
+// NOVA FUNÇÃO: Buscar informações de uma tarefa com criador
+export async function buscarTarefaComCriador(idTarefa: number): Promise<any> {
+  const result = await pool.query(
+    `SELECT t.*, u.email as criador_email, u.nome as criador_nome
+     FROM tarefas t
+     JOIN usuarios u ON t.id_usuario = u.id_usuario
+     WHERE t.id_tarefa = $1`,
+    [idTarefa]
+  );
+  
+  return result.rows[0] || null;
+}
