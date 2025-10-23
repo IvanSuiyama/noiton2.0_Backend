@@ -379,3 +379,101 @@ export async function usuarioTemAcessoTarefa(id_tarefa: number, id_usuario: numb
   
   return result.rows.length > 0;
 }
+
+// ✨ NOVA FUNCIONALIDADE: Filtros avançados para tarefas
+export interface FiltrosAvancados {
+  palavras_chave?: string;        // Busca em título e descrição
+  status?: string;                // Status exato da tarefa
+  prioridade?: string;            // Prioridade exata da tarefa
+  categoria_nome?: string;        // Nome da categoria (ILIKE)
+  minhas_tarefas?: boolean;       // Apenas tarefas do usuário logado
+  recorrentes?: boolean;          // Apenas tarefas recorrentes
+  tipo_recorrencia?: 'diaria' | 'semanal' | 'mensal'; // Tipo específico de recorrência
+  tarefas_com_prazo?: boolean;    // Apenas tarefas que têm data_fim definida
+}
+
+export async function buscarTarefasComFiltrosAvancados(
+  id_workspace: number, 
+  filtros: FiltrosAvancados, 
+  id_usuario_logado?: number
+): Promise<Tarefa[]> {
+  let query = `
+    SELECT DISTINCT
+      t.*,
+      tw.id_workspace,
+      COALESCE(
+        ARRAY_AGG(DISTINCT tc.id_categoria) FILTER (WHERE tc.id_categoria IS NOT NULL), 
+        ARRAY[]::INTEGER[]
+      ) as categorias,
+      COALESCE(
+        ARRAY_AGG(DISTINCT jsonb_build_object('id_categoria', c.id_categoria, 'nome', c.nome)) 
+        FILTER (WHERE c.id_categoria IS NOT NULL), 
+        ARRAY[]::jsonb[]
+      ) as categorias_detalhes
+    FROM tarefas t
+    INNER JOIN tarefa_workspace tw ON t.id_tarefa = tw.id_tarefa
+    LEFT JOIN tarefa_categoria tc ON t.id_tarefa = tc.id_tarefa
+    LEFT JOIN categorias c ON tc.id_categoria = c.id_categoria
+  `;
+  
+  const params: any[] = [id_workspace];
+  let wheres = ['tw.id_workspace = $1'];
+
+  // ✅ Filtro por palavras-chave (título e descrição)
+  if (filtros.palavras_chave?.trim()) {
+    wheres.push(`(t.titulo ILIKE $${params.length + 1} OR t.descricao ILIKE $${params.length + 2})`);
+    const palavra = `%${filtros.palavras_chave.trim()}%`;
+    params.push(palavra);
+    params.push(palavra);
+  }
+
+  // ✅ Filtro por status
+  if (filtros.status) {
+    wheres.push(`t.status = $${params.length + 1}`);
+    params.push(filtros.status);
+  }
+
+  // ✅ Filtro por prioridade
+  if (filtros.prioridade) {
+    wheres.push(`t.prioridade = $${params.length + 1}`);
+    params.push(filtros.prioridade);
+  }
+
+  // ✅ Filtro por categoria (nome)
+  if (filtros.categoria_nome?.trim()) {
+    wheres.push(`c.nome ILIKE $${params.length + 1}`);
+    params.push(`%${filtros.categoria_nome.trim()}%`);
+  }
+
+  // ✅ Filtro "minhas tarefas" (apenas tarefas do usuário logado)
+  if (filtros.minhas_tarefas && id_usuario_logado) {
+    wheres.push(`t.id_usuario = $${params.length + 1}`);
+    params.push(id_usuario_logado);
+  }
+
+  // ✅ Filtro por tarefas recorrentes
+  if (filtros.recorrentes) {
+    wheres.push(`t.recorrente = true`);
+  }
+
+  // ✅ Filtro por tipo de recorrência
+  if (filtros.tipo_recorrencia) {
+    wheres.push(`t.recorrencia = $${params.length + 1}`);
+    params.push(filtros.tipo_recorrencia);
+  }
+
+  // ✨ NOVO: Filtro por tarefas com prazo
+  if (filtros.tarefas_com_prazo) {
+    wheres.push(`t.data_fim IS NOT NULL`);
+  }
+
+  query += ' WHERE ' + wheres.join(' AND ') + 
+           ' GROUP BY t.id_tarefa, tw.id_workspace' +
+           ' ORDER BY t.data_criacao DESC';
+  
+  console.log('🔍 Query de filtros avançados:', query);
+  console.log('🔍 Parâmetros:', params);
+  
+  const result = await pool.query(query, params);
+  return result.rows;
+}

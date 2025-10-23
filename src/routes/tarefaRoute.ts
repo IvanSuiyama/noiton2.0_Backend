@@ -16,8 +16,11 @@ router.get('/workspace/:id_workspace', autenticarJWT, tarefaController.listarTar
 router.get('/workspace/:id_workspace/usuario', autenticarJWT, tarefaController.buscarTarefasPorUsuarioEWorkspace);
 router.get('/workspace/:id_workspace/usuario/:id_usuario', autenticarJWT, tarefaController.buscarTarefasPorUsuarioEWorkspace);
 
-// Buscar tarefas com filtros em um workspace
+// Buscar tarefas com filtros em um workspace (compatibilidade)
 router.get('/workspace/:id_workspace/filtros', autenticarJWT, tarefaController.buscarTarefasComFiltros);
+
+// ✨ NOVA ROTA: Buscar tarefas com filtros avançados
+router.get('/workspace/:id_workspace/filtros-avancados', autenticarJWT, tarefaController.buscarTarefasComFiltrosAvancados);
 
 // Buscar tarefa por ID e workspace (nova rota)
 router.get('/workspace/:id_workspace/tarefa/:id_tarefa', autenticarJWT, tarefaController.buscarTarefaPorIdEWorkspace);

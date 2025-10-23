@@ -119,7 +119,7 @@ export async function buscarTarefasPorUsuarioEWorkspace(req: Request, res: Respo
   }
 }
 
-// Função para buscar tarefas com filtros
+// Função para buscar tarefas com filtros (mantém compatibilidade)
 export async function buscarTarefasComFiltros(req: Request, res: Response) {
   try {
     const { id_workspace } = req.params;
@@ -143,6 +143,43 @@ export async function buscarTarefasComFiltros(req: Request, res: Response) {
     enviarDadosJSON(res, tarefas);
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao buscar tarefas', error);
+  }
+}
+
+// ✨ NOVA FUNÇÃO: Buscar tarefas com filtros avançados
+export async function buscarTarefasComFiltrosAvancados(req: Request, res: Response) {
+  try {
+    const { id_workspace } = req.params;
+    const filtros = req.query as tarefaService.FiltrosAvancados;
+    
+    if (!id_workspace) {
+      return res.status(400).json({ error: 'ID do workspace é obrigatório.' });
+    }
+    
+    // Verifica se o usuário tem acesso ao workspace
+    const temAcesso = await pool.query(
+      'SELECT 1 FROM usuario_workspace WHERE id_workspace = $1 AND email = $2',
+      [Number(id_workspace), req.user?.email]
+    );
+    
+    if (temAcesso.rows.length === 0) {
+      return enviarErroNaoAutorizado(res, 'Você não tem acesso a este workspace');
+    }
+    
+    console.log('🔍 Filtros recebidos:', filtros);
+    console.log('🔍 Usuário logado:', req.user?.id_usuario);
+    
+    const tarefas = await tarefaService.buscarTarefasComFiltrosAvancados(
+      Number(id_workspace), 
+      filtros,
+      req.user?.id_usuario
+    );
+    
+    console.log('✅ Tarefas encontradas:', tarefas.length);
+    enviarDadosJSON(res, tarefas);
+  } catch (error) {
+    console.error('❌ Erro ao buscar tarefas com filtros avançados:', error);
+    enviarRespostaErro(res, 'Erro ao buscar tarefas com filtros avançados', error);
   }
 }
 
