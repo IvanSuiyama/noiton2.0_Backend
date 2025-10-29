@@ -8,6 +8,7 @@ import comentarioRoute from './comentarioRoute';
 import tarefaRoute from './tarefaRoute';
 import permissaoRoute from './permissaoRoute';
 import denunciaRoute from './denunciaRoute';
+import anexoTarefaRoute from './anexoTarefaRoute';
 import { autenticarJWT } from '../middlewares/authMiddleware';
 const router = Router();
 
@@ -33,5 +34,6 @@ router.use('/tarefas', tarefaRoute);
 router.use('/', comentarioRoute); // Rotas de comentários
 router.use('/', permissaoRoute); // Rotas de permissões
 router.use('/denuncias', denunciaRoute); // Rotas de denúncias
+router.use('/', anexoTarefaRoute); // Rotas de anexos de tarefas
 
 export default router;

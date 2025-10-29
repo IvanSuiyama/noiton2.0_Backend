@@ -8,6 +8,7 @@ import { criarTabelaComentarios } from '../models/comentarioModel';
 import { criarTabelaTarefaWorkspace } from '../models/tarefaWorkspaceModel';
 import { criarTabelaTarefaPermissoes } from '../models/tarefaPermissaoModel';
 import { criarTabelaDenuncia } from '../models/denunciaModel';
+import { criarTabelaAnexosTarefa } from '../models/anexoTarefaModel';
 
 async function resetDatabase() {
   try {
@@ -19,6 +20,7 @@ async function resetDatabase() {
     console.log('🗑️ Apagando tabelas existentes...');
     
     // 1. Tabelas dependentes primeiro
+    await pool.query('DROP TABLE IF EXISTS anexos_tarefa CASCADE');
     await pool.query('DROP TABLE IF EXISTS denuncias CASCADE');
     await pool.query('DROP TABLE IF EXISTS comentarios CASCADE');
     await pool.query('DROP TABLE IF EXISTS tarefa_permissoes CASCADE');
@@ -66,6 +68,9 @@ async function resetDatabase() {
     
     console.log('📢 Criando tabela denuncias...');
     await criarTabelaDenuncia();
+    
+    console.log('📎 Criando tabela anexos_tarefa...');
+    await criarTabelaAnexosTarefa();
     
     console.log('🎉 Todas as tabelas foram recriadas com sucesso!');
     
