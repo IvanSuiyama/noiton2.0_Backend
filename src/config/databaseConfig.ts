@@ -1,7 +1,5 @@
 import { Pool } from 'pg';
-
-
-const connectionString = 'SUA URL AQUI'
+ const connectionString = 'SUA URL AQUI'
 const pool = new Pool({
   connectionString,
   max: 10,

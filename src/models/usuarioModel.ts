@@ -10,7 +10,8 @@ export async function criarTabelaUsuario() {
       email VARCHAR(255) UNIQUE NOT NULL,
       senha VARCHAR(255) NOT NULL,
       telefone VARCHAR(20) UNIQUE,
-      nome VARCHAR(100) NOT NULL
+      nome VARCHAR(100) NOT NULL,
+      pontos FLOAT DEFAULT 0.0
     );
   `);
 }
