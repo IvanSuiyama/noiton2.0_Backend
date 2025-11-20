@@ -110,6 +110,23 @@ export async function adicionarPontosUsuario(id_usuario: number, pontosGanhos: n
   );
 }
 
+// Função para remover pontos de um usuário
+export async function removerPontosUsuario(id_usuario: number, pontosRemover: number): Promise<boolean> {
+  // Primeiro verifica se o usuário tem pontos suficientes
+  const pontosAtuais = await buscarPontosUsuario(id_usuario);
+  
+  if (pontosAtuais < pontosRemover) {
+    return false; // Não tem pontos suficientes
+  }
+  
+  await pool.query(
+    'UPDATE usuarios SET pontos = pontos - $1 WHERE id_usuario = $2',
+    [pontosRemover, id_usuario]
+  );
+  
+  return true; // Pontos removidos com sucesso
+}
+
 // Função para obter pontos de um usuário por email
 export async function obterPontosUsuarioPorEmail(email: string): Promise<number> {
   const result = await pool.query('SELECT pontos FROM usuarios WHERE email = $1', [email]);

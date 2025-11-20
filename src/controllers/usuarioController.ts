@@ -5,7 +5,8 @@ import {
   buscarTodosUsuarios,
   buscarUsuarioPorEmail,
   buscarUsuarioPorTelefone,
-  deletarUsuarioPorEmail
+  deletarUsuarioPorEmail,
+  removerPontosUsuario
 } from '../services/usuarioService';
 
 // Função auxiliar para enviar resposta de sucesso
@@ -136,5 +137,42 @@ export async function obterMeusPontos(req: Request, res: Response) {
     });
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao buscar seus pontos', error);
+  }
+}
+
+// Função para remover pontos do usuário (compras)
+export async function removerPontos(req: Request, res: Response) {
+  try {
+    if (!req.user?.email) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+    
+    const { pontos } = req.body;
+    
+    if (!pontos || pontos <= 0) {
+      return enviarRespostaErro(res, 'Quantidade de pontos inválida', null, 400);
+    }
+    
+    const usuario = await buscarUsuarioPorEmail(req.user.email);
+    
+    if (!usuario) {
+      return enviarErro404(res, 'Usuário não encontrado');
+    }
+    
+    const sucesso = await removerPontosUsuario(usuario.id!, pontos);
+    
+    if (!sucesso) {
+      return enviarRespostaErro(res, 'Pontos insuficientes para esta compra', null, 400);
+    }
+    
+    // Buscar pontos atualizados
+    const usuarioAtualizado = await buscarUsuarioPorEmail(req.user.email);
+    
+    enviarDadosJSON(res, {
+      message: `${pontos} pontos removidos com sucesso!`,
+      pontosRestantes: usuarioAtualizado?.pontos || 0.0
+    });
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao remover pontos', error);
   }
 }

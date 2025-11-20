@@ -264,16 +264,23 @@ export async function atualizarTarefa(req: Request, res: Response) {
     // Atualiza a tarefa
     await tarefaService.atualizarTarefa(Number(id_tarefa), dados);
     
-    // Verifica se a tarefa foi concluída dentro do prazo
-    if (dados.status === 'concluida' && tarefaAtual.status !== 'concluida') {
+    // Verifica se a tarefa foi concluída
+    if (dados.status === 'concluido' && tarefaAtual.status !== 'concluido') {
       const agora = new Date();
       const dataFim = tarefaAtual.data_fim ? new Date(tarefaAtual.data_fim) : null;
       
-      // Se há data limite e foi concluída dentro do prazo, ganha 0.5 pontos
+      // Usuário sempre ganha 0.5 pontos ao completar uma tarefa
+      let pontosGanhos = 0.5;
+      let motivoPontos = 'completar tarefa';
+      
+      // Se há data limite e foi concluída dentro do prazo, ganha pontos extras
       if (dataFim && agora <= dataFim) {
-        await adicionarPontosUsuario(tarefaAtual.id_usuario, 0.5);
-        console.log(`✅ Usuário ${tarefaAtual.id_usuario} ganhou 0.5 pontos por completar tarefa ${id_tarefa} dentro do prazo`);
+        pontosGanhos = 1.0; // 0.5 por completar + 0.5 bônus por estar no prazo
+        motivoPontos = 'completar tarefa dentro do prazo';
       }
+      
+      await adicionarPontosUsuario(tarefaAtual.id_usuario, pontosGanhos);
+      console.log(`✅ Usuário ${tarefaAtual.id_usuario} ganhou ${pontosGanhos} pontos por ${motivoPontos} (tarefa ${id_tarefa})`);
     }
     
     enviarRespostaSucesso(res, 'Tarefa atualizada com sucesso!');

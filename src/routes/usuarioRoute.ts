@@ -7,7 +7,8 @@ import {
   buscarPorTelefone, 
   deletar, 
   obterPontos, 
-  obterMeusPontos 
+  obterMeusPontos,
+  removerPontos 
 } from '../controllers/usuarioController';
 
 const router = Router();
@@ -18,6 +19,7 @@ router.get('/email/:email', buscarPorEmail);
 router.get('/telefone/:telefone', buscarPorTelefone);
 router.get('/pontos/:email', obterPontos);
 router.get('/meus-pontos', obterMeusPontos);
+router.post('/remover-pontos', removerPontos);
 router.delete('/:email', deletar);
 
 export default router;
