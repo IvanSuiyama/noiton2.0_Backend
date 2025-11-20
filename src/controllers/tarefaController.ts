@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import * as tarefaService from '../services/tarefaService';
 import pool from '../config/databaseConfig';
 import { Tarefa } from '../services/tarefaService';
+import { adicionarPontosUsuario } from '../services/usuarioService';
 // Reutilizando as funções auxiliares do usuarioController
 import {
   enviarRespostaSucesso,
@@ -248,18 +249,33 @@ export async function atualizarTarefa(req: Request, res: Response) {
       return res.status(400).json({ error: 'ID da tarefa é obrigatório.' });
     }
     
-    // Apenas verifica se a tarefa existe
-    const tarefaExiste = await pool.query(
-      'SELECT id_tarefa FROM tarefas WHERE id_tarefa = $1',
+    // Busca dados completos da tarefa antes da atualização
+    const tarefaAntes = await pool.query(
+      'SELECT id_tarefa, status, data_fim, id_usuario FROM tarefas WHERE id_tarefa = $1',
       [Number(id_tarefa)]
     );
     
-    if (tarefaExiste.rows.length === 0) {
+    if (tarefaAntes.rows.length === 0) {
       return enviarErro404(res, 'Tarefa não encontrada');
     }
     
-    // Qualquer usuário que tenha acesso à tarefa pode editá-la
+    const tarefaAtual = tarefaAntes.rows[0];
+    
+    // Atualiza a tarefa
     await tarefaService.atualizarTarefa(Number(id_tarefa), dados);
+    
+    // Verifica se a tarefa foi concluída dentro do prazo
+    if (dados.status === 'concluida' && tarefaAtual.status !== 'concluida') {
+      const agora = new Date();
+      const dataFim = tarefaAtual.data_fim ? new Date(tarefaAtual.data_fim) : null;
+      
+      // Se há data limite e foi concluída dentro do prazo, ganha 0.5 pontos
+      if (dataFim && agora <= dataFim) {
+        await adicionarPontosUsuario(tarefaAtual.id_usuario, 0.5);
+        console.log(`✅ Usuário ${tarefaAtual.id_usuario} ganhou 0.5 pontos por completar tarefa ${id_tarefa} dentro do prazo`);
+      }
+    }
+    
     enviarRespostaSucesso(res, 'Tarefa atualizada com sucesso!');
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao atualizar tarefa', error);

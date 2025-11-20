@@ -8,6 +8,7 @@ export interface Usuario {
   senha: string;
   telefone?: string | null;
   nome: string;
+  pontos?: number;
 }
 
 // Função auxiliar para validar email
@@ -24,8 +25,8 @@ export async function criptografarSenha(senha: string): Promise<string> {
 // Função auxiliar para inserir usuário no banco
 export async function inserirUsuarioNoBanco(usuario: Usuario, senhaCriptografada: string): Promise<void> {
   await pool.query(
-    'INSERT INTO usuarios (email, senha, telefone, nome) VALUES ($1, $2, $3, $4)',
-    [usuario.email, senhaCriptografada, usuario.telefone ?? null, usuario.nome]
+    'INSERT INTO usuarios (email, senha, telefone, nome, pontos) VALUES ($1, $2, $3, $4, $5)',
+    [usuario.email, senhaCriptografada, usuario.telefone ?? null, usuario.nome, usuario.pontos ?? 0.0]
   );
 }
 
@@ -81,18 +82,38 @@ export async function editarUsuario(email: string, dados: Partial<Usuario>): Pro
 }
 
 export async function buscarTodosUsuarios(): Promise<Usuario[]> {
-  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome FROM usuarios');
+  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome, pontos FROM usuarios');
   return result.rows;
 }
 
 export async function buscarUsuarioPorEmail(email: string): Promise<Usuario | null> {
-  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome FROM usuarios WHERE email = $1', [email]);
+  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome, pontos FROM usuarios WHERE email = $1', [email]);
   return result.rows[0] || null;
 }
 
 export async function buscarUsuarioPorTelefone(telefone: string): Promise<Usuario | null> {
-  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome FROM usuarios WHERE telefone = $1', [telefone]);
+  const result = await pool.query('SELECT id_usuario as id, email, telefone, nome, pontos FROM usuarios WHERE telefone = $1', [telefone]);
   return result.rows[0] || null;
+}
+
+// Função para buscar pontos de um usuário
+export async function buscarPontosUsuario(id_usuario: number): Promise<number> {
+  const result = await pool.query('SELECT pontos FROM usuarios WHERE id_usuario = $1', [id_usuario]);
+  return result.rows[0]?.pontos || 0.0;
+}
+
+// Função para adicionar pontos a um usuário
+export async function adicionarPontosUsuario(id_usuario: number, pontosGanhos: number): Promise<void> {
+  await pool.query(
+    'UPDATE usuarios SET pontos = pontos + $1 WHERE id_usuario = $2',
+    [pontosGanhos, id_usuario]
+  );
+}
+
+// Função para obter pontos de um usuário por email
+export async function obterPontosUsuarioPorEmail(email: string): Promise<number> {
+  const result = await pool.query('SELECT pontos FROM usuarios WHERE email = $1', [email]);
+  return result.rows[0]?.pontos || 0.0;
 }
 
 export async function deletarUsuarioPorEmail(email: string): Promise<void> {

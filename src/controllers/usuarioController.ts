@@ -95,3 +95,46 @@ export async function deletar(req: Request, res: Response) {
     enviarRespostaErro(res, 'Erro ao deletar usuário', error);
   }
 }
+
+// Função para obter pontos do usuário
+export async function obterPontos(req: Request, res: Response) {
+  try {
+    const { email } = req.params;
+    const usuario = await buscarUsuarioPorEmail(email);
+    
+    if (!usuario) {
+      return enviarErro404(res, 'Usuário não encontrado');
+    }
+    
+    enviarDadosJSON(res, {
+      email: usuario.email,
+      nome: usuario.nome,
+      pontos: usuario.pontos || 0.0
+    });
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao buscar pontos do usuário', error);
+  }
+}
+
+// Função para obter pontos do usuário autenticado
+export async function obterMeusPontos(req: Request, res: Response) {
+  try {
+    if (!req.user?.email) {
+      return res.status(401).json({ error: 'Usuário não autenticado' });
+    }
+    
+    const usuario = await buscarUsuarioPorEmail(req.user.email);
+    
+    if (!usuario) {
+      return enviarErro404(res, 'Usuário não encontrado');
+    }
+    
+    enviarDadosJSON(res, {
+      email: usuario.email,
+      nome: usuario.nome,
+      pontos: usuario.pontos || 0.0
+    });
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao buscar seus pontos', error);
+  }
+}
