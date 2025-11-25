@@ -154,7 +154,7 @@ export async function atualizarStatusDenunciaAdmin(
     SET 
       status = $1,
       data_analise = NOW(),
-      id_moderador = 999999,
+      id_moderador = NULL,
       observacoes_moderador = $2
     WHERE id_denuncia = $3 AND status = 'pendente'
   `;
@@ -166,6 +166,144 @@ export async function atualizarStatusDenunciaAdmin(
   ]);
   
   return result.rowCount! > 0;
+}
+
+// Função auxiliar para deletar tarefa completamente (com cascade manual)
+export async function deletarTarefaCompleta(id_tarefa: number, client: any): Promise<void> {
+  // Ordem específica para evitar violações de foreign key
+  console.log(`🗑️ Iniciando deleção da tarefa ${id_tarefa} e todas suas relações...`);
+  
+  // 1. Deletar comentários da tarefa
+  const comentarios = await client.query('DELETE FROM comentarios WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`📝 Deletados ${comentarios.rowCount} comentários`);
+  
+  // 2. Deletar outras denúncias relacionadas à mesma tarefa (menos a atual)
+  const outrasdenuncias = await client.query('DELETE FROM denuncias WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`🚨 Deletadas ${outrasdenuncias.rowCount} outras denúncias`);
+  
+  // 3. Deletar permissões da tarefa
+  const permissoes = await client.query('DELETE FROM tarefa_permissoes WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`🔐 Deletadas ${permissoes.rowCount} permissões`);
+  
+  // 4. Deletar relação tarefa-categoria (não deleta a categoria, só a relação)
+  const categorias = await client.query('DELETE FROM tarefa_categoria WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`🏷️ Deletadas ${categorias.rowCount} relações com categorias`);
+  
+  // 5. Deletar relação tarefa-workspace
+  const workspace = await client.query('DELETE FROM tarefa_workspace WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`🏢 Deletadas ${workspace.rowCount} relações com workspace`);
+  
+  // 6. Deletar anexos da tarefa
+  try {
+    const anexos = await client.query('DELETE FROM anexos_tarefa WHERE id_tarefa = $1', [id_tarefa]);
+    console.log(`📎 Deletados ${anexos.rowCount} anexos`);
+  } catch (error: any) {
+    console.log(`⚠️ Erro ao deletar anexos - Código: ${error.code}, Mensagem: ${error.message}`);
+    // Como a tabela tem CASCADE, se não conseguir deletar anexos, pode ser problema
+    throw error;
+  }
+  
+  // 7. Finalmente, deletar a tarefa principal
+  const tarefa = await client.query('DELETE FROM tarefas WHERE id_tarefa = $1', [id_tarefa]);
+  console.log(`✅ Tarefa ${id_tarefa} deletada com sucesso!`);
+  
+  if (tarefa.rowCount === 0) {
+    throw new Error(`Tarefa ${id_tarefa} não foi encontrada para deleção`);
+  }
+}
+
+// Aprovar denúncia (deleta a tarefa relacionada)
+export async function aprovarDenunciaAdmin(id_denuncia: number): Promise<boolean> {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Buscar a tarefa relacionada à denúncia (qualquer status)
+    const denunciaResult = await client.query(
+      'SELECT id_tarefa, status FROM denuncias WHERE id_denuncia = $1',
+      [id_denuncia]
+    );
+    
+    if (denunciaResult.rows.length === 0) {
+      console.log(`❌ Denúncia ${id_denuncia} não encontrada`);
+      await client.query('ROLLBACK');
+      return false;
+    }
+    
+    const { id_tarefa, status } = denunciaResult.rows[0];
+    console.log(`🔍 Denúncia ${id_denuncia} encontrada. Tarefa: ${id_tarefa}, Status atual: ${status}`);
+    
+    // Se já foi aprovada antes, só deleta a tarefa
+    if (status === 'aprovada') {
+      console.log(`⚠️ Denúncia já estava aprovada. Forçando deleção da tarefa ${id_tarefa}...`);
+    } else {
+      // Atualizar status da denúncia para 'aprovada'
+      await client.query(
+        `UPDATE denuncias 
+         SET status = 'aprovada', data_analise = NOW(), observacoes_moderador = 'Denúncia aprovada. Tarefa removida pelo administrador', id_moderador = NULL
+         WHERE id_denuncia = $1`,
+        [id_denuncia]
+      );
+      console.log(`✅ Status da denúncia ${id_denuncia} atualizado para 'aprovada'`);
+    }
+    
+    // Deletar a tarefa e todos os relacionamentos
+    await deletarTarefaCompleta(id_tarefa, client);
+    
+    await client.query('COMMIT');
+    console.log(`🎉 Aprovação da denúncia ${id_denuncia} concluída com sucesso!`);
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`💥 Erro ao aprovar denúncia ${id_denuncia}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+// Rejeitar denúncia (deleta apenas a denúncia)
+export async function rejeitarDenunciaAdmin(id_denuncia: number): Promise<boolean> {
+  const query = `
+    DELETE FROM denuncias 
+    WHERE id_denuncia = $1 AND status = 'pendente'
+  `;
+  
+  const result = await pool.query(query, [id_denuncia]);
+  return result.rowCount! > 0;
+}
+
+// Forçar deleção de tarefa (para casos onde denúncia foi aprovada mas tarefa não foi deletada)
+export async function forcarDelecaoTarefaAdmin(id_tarefa: number): Promise<boolean> {
+  const client = await pool.connect();
+  
+  try {
+    await client.query('BEGIN');
+    
+    // Verificar se a tarefa existe
+    const tarefaCheck = await client.query('SELECT id_tarefa FROM tarefas WHERE id_tarefa = $1', [id_tarefa]);
+    if (tarefaCheck.rows.length === 0) {
+      console.log(`❌ Tarefa ${id_tarefa} não encontrada`);
+      await client.query('ROLLBACK');
+      return false;
+    }
+    
+    console.log(`🔨 Forçando deleção da tarefa ${id_tarefa}...`);
+    
+    // Usar a função auxiliar para deletar completamente
+    await deletarTarefaCompleta(id_tarefa, client);
+    
+    await client.query('COMMIT');
+    console.log(`🎉 Deleção forçada da tarefa ${id_tarefa} concluída!`);
+    return true;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(`💥 Erro ao forçar deleção da tarefa ${id_tarefa}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 // ====================================

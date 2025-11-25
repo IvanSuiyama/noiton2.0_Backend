@@ -2,8 +2,11 @@ import { Router } from 'express';
 import { 
   listarTodasDenuncias,
   atualizarStatusDenuncia,
+  aprovarDenuncia,
+  rejeitarDenuncia,
   listarTodasTarefas,
   deletarTarefaAdmin,
+  forcarDelecaoTarefa,
   listarTodosUsuarios,
   dashboard
 } from '../controllers/adminController';
@@ -24,12 +27,15 @@ router.get('/dashboard', dashboard);
 // ====================================
 router.get('/denuncias', listarTodasDenuncias);
 router.put('/denuncias/:id/status', atualizarStatusDenuncia);
+router.post('/denuncias/:id/aprovar', aprovarDenuncia);
+router.delete('/denuncias/:id/rejeitar', rejeitarDenuncia);
 
 // ====================================
 // ROTAS DE TAREFAS
 // ====================================
 router.get('/tarefas', listarTodasTarefas);
 router.delete('/tarefas/:id_tarefa', deletarTarefaAdmin);
+router.post('/tarefas/:id_tarefa/forcar-delecao', forcarDelecaoTarefa);
 
 // ====================================
 // ROTAS DE USUÁRIOS

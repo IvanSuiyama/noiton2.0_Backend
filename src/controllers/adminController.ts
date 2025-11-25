@@ -59,6 +59,48 @@ export async function atualizarStatusDenuncia(req: Request, res: Response) {
   }
 }
 
+// Aprovar denúncia (deleta a tarefa)
+export async function aprovarDenuncia(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(Number(id))) {
+      return enviarRespostaErro(res, 'ID da denúncia inválido', null, 400);
+    }
+
+    const sucesso = await adminService.aprovarDenunciaAdmin(Number(id));
+
+    if (!sucesso) {
+      return enviarErro404(res, 'Denúncia não encontrada ou já processada');
+    }
+
+    enviarRespostaSucesso(res, 'Denúncia aprovada e tarefa removida pelo administrador');
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao aprovar denúncia (admin)', error);
+  }
+}
+
+// Rejeitar denúncia (deleta a denúncia)
+export async function rejeitarDenuncia(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(Number(id))) {
+      return enviarRespostaErro(res, 'ID da denúncia inválido', null, 400);
+    }
+
+    const sucesso = await adminService.rejeitarDenunciaAdmin(Number(id));
+
+    if (!sucesso) {
+      return enviarErro404(res, 'Denúncia não encontrada ou já processada');
+    }
+
+    enviarRespostaSucesso(res, 'Denúncia rejeitada e removida pelo administrador');
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao rejeitar denúncia (admin)', error);
+  }
+}
+
 // ====================================
 // FUNÇÕES DE TAREFAS PARA ADMIN
 // ====================================
@@ -96,6 +138,27 @@ export async function deletarTarefaAdmin(req: Request, res: Response) {
     enviarRespostaSucesso(res, `Tarefa ${id_tarefa} deletada pelo administrador`);
   } catch (error) {
     enviarRespostaErro(res, 'Erro ao deletar tarefa (admin)', error);
+  }
+}
+
+// Forçar deleção de tarefa (para casos problemáticos)
+export async function forcarDelecaoTarefa(req: Request, res: Response) {
+  try {
+    const { id_tarefa } = req.params;
+    
+    if (!id_tarefa || isNaN(Number(id_tarefa))) {
+      return enviarRespostaErro(res, 'ID da tarefa inválido', null, 400);
+    }
+
+    const sucesso = await adminService.forcarDelecaoTarefaAdmin(Number(id_tarefa));
+    
+    if (!sucesso) {
+      return enviarErro404(res, 'Tarefa não encontrada');
+    }
+
+    enviarRespostaSucesso(res, `Tarefa ${id_tarefa} FORÇADAMENTE deletada pelo administrador com todas as relações`);
+  } catch (error) {
+    enviarRespostaErro(res, 'Erro ao forçar deleção da tarefa (admin)', error);
   }
 }
 
