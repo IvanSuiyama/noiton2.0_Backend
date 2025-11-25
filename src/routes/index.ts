@@ -9,6 +9,7 @@ import tarefaRoute from './tarefaRoute';
 import permissaoRoute from './permissaoRoute';
 import denunciaRoute from './denunciaRoute';
 import anexoTarefaRoute from './anexoTarefaRoute';
+import adminRoute from './adminRoute';
 import { autenticarJWT } from '../middlewares/authMiddleware';
 const router = Router();
 
@@ -22,6 +23,9 @@ router.get('/', (req, res) => {
 // Rotas públicas
 router.use('/usuarios', usuarioRoutePublic); // Só cadastro de usuário é livre
 router.use('/auth', authRoute); // /auth/login
+
+// Rotas específicas para administrador (com token fixo)
+router.use('/admin', adminRoute);
 
 // Middleware de autenticação para todas as rotas abaixo
 router.use(autenticarJWT);
