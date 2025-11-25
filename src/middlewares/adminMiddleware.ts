@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 // Token fixo para administrador (você pode alterar este valor)
-const ADMIN_TOKEN = 'SEU TOKEN SECRETO AQUI';
+const ADMIN_TOKEN = '';
 
 // Interface para adicionar informações do admin ao request
 declare global {
