@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 // Token fixo para administrador (você pode alterar este valor)
-const ADMIN_TOKEN = '';
+const ADMIN_TOKEN = 'ADMIN_NOITON_2025_SECURE_TOKEN_XYZ123';
 
 // Interface para adicionar informações do admin ao request
 declare global {
