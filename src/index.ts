@@ -20,7 +20,7 @@ async function startServer() {
     process.exit(1);
   }
 
- app.listen(3000, '192.168.15.14', () => {
+ app.listen(3000, '', () => {
   console.log("Backend rodando na porta 3000");
 });
 
